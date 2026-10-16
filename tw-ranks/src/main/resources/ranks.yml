@@ -1,0 +1,78 @@
+ranks:
+  CARVAO:
+    prefix: "&8[Carvão]"
+    next: "NEVE"
+    cost: 25000.0
+    broadcast: false
+    commands: []
+  NEVE:
+    prefix: "&f[Neve]"
+    next: "SINO"
+    cost: 800000.0
+    broadcast: false
+    commands: []
+  SINO:
+    prefix: "&e[Sino]"
+    next: "BISCOITO"
+    cost: 25000000.0
+    broadcast: false
+    commands: []
+  BISCOITO:
+    prefix: "&6[Biscoito]"
+    next: "DUENDE"
+    cost: 500000000.0
+    broadcast: false
+    commands:
+      - "give %player% diamond 1"
+  DUENDE:
+    prefix: "&a[Duende]"
+    next: "RENA"
+    cost: 15000000000.0
+    broadcast: true
+    commands:
+      - "give %player% emerald 5"
+  RENA:
+    prefix: "&c[Rena]"
+    next: "TRENO"
+    cost: 500000000000.0
+    broadcast: true
+    commands: []
+  TRENO:
+    prefix: "&4[Trenó]"
+    next: "QUEBRANOZES"
+    cost: 20000000000000.0
+    broadcast: true
+    commands: []
+  QUEBRANOZES:
+    prefix: "&5[Quebra-Nozes]"
+    next: "ESTRELA"
+    cost: 800000000000000.0
+    broadcast: true
+    commands: []
+  ESTRELA:
+    prefix: "&e&l[Estrela]"
+    next: "NOEL"
+    cost: 15000000000000000.0
+    broadcast: true
+    commands: []
+  NOEL:
+    prefix: "&c&l[Noel]"
+    next: "MAX"
+    cost: 0.0
+    broadcast: true
+    commands:
+      - "eco give %player% 1000000"
+
+prestiges:
+  GRINCH:
+    prefix: "&2&l[Grinch]"
+    cost: 50000000000000000.0
+    multiplier: 1.5
+  YETI:
+    prefix: "&b&l[Yeti]"
+    cost: 200000000000000000.0
+    multiplier: 2.0
+  KRAMPUS:
+    prefix: "&4&l[Krampus]"
+    cost: 800000000000000000.0
+    multiplier: 3.0

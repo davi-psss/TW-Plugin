@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding">
+    <file url="file://$PROJECT_DIR$/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/tw-core/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/tw-core/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/tw-economia/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/tw-economia/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/tw-lobby/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/tw-lobby/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/tw-maquinas/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/tw-maquinas/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/tw-minas/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/tw-minas/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/tw-ranks/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/tw-ranks/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/tw-spawners/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/tw-spawners/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/tw-terrenos/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/tw-terrenos/src/main/resources" charset="UTF-8" />
+  </component>
+</project>

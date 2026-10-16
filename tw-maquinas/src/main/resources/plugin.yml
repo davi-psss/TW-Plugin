@@ -1,0 +1,8 @@
+name: tw-maquinas
+version: 1.0
+main: br.com.tw.maquinas.TWMaquinasPlugin
+depend: [tw-core, tw-economia]
+commands:
+  maquinas:
+    description: Abre a loja e central de maquinas
+    aliases: [maquina]

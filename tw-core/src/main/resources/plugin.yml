@@ -1,0 +1,4 @@
+name: tw-core
+version: 1.0
+main: br.com.tw.core.TWCorePlugin
+api-version: 1.13 # Ajuste se precisar, embora usemos código 1.8.8

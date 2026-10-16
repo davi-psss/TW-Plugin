@@ -1,0 +1,11 @@
+name: tw-lobby
+version: 1.0
+main: br.com.tw.lobby.TWLobbyPlugin
+depend: [tw-core]
+commands:
+  setlobby:
+    description: Define a localizacao do spawn do Lobby
+    permission: tw.admin
+  lobby:
+    description: Volta rapidamente para o Lobby
+    aliases: [hub, spawn]

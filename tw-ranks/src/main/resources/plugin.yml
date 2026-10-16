@@ -1,0 +1,18 @@
+name: tw-ranks
+version: 1.0
+main: br.com.tw.ranks.TWRanksPlugin
+depend: [tw-core, Vault]
+softdepend: [PlaceholderAPI]
+commands:
+  rankup:
+    description: Evolui o seu rank atual
+  prestigio:
+    description: Evolui o seu prestigio atual apos atingir o rank MAX
+  twadmin:
+    description: Comandos administrativos do TW-Ranks
+    permission: tw.admin
+  ranks:
+    description: Abre o menu principal de Ranks e Prestigios
+    aliases: [rank]
+  rankupmax:
+    description: Compra o maximo de ranks possiveis com o teu saldo

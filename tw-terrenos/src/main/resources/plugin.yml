@@ -1,0 +1,8 @@
+name: tw-terrenos
+version: 1.0
+main: br.com.tw.terrenos.TWTerrenosPlugin
+depend: [tw-core]
+commands:
+  terreno:
+    description: Abre a agencia de terrenos
+    aliases: [terrenos, plot, p]

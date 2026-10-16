@@ -1,0 +1,22 @@
+name: tw-economia
+version: 1.0
+main: br.com.tw.economia.TWEconomiaPlugin
+depend: [tw-core]
+commands:
+  booster:
+    description: Gerencia os multiplicadores globais de economia
+    permission: tw.admin
+  money:
+    description: Verifica o teu saldo atual
+    aliases: [saldo, bal, balance]
+  pay:
+    description: Envia dinheiro para outro jogador online
+    aliases: [ pagar ]
+  baltop:
+    description: Mostra o ranking dos jogadores mais ricos do servidor
+    aliases: [ magnatas, topmoney ]
+  eco:
+    description: Comando administrativo para gerir o dinheiro dos jogadores
+    permission: tw.admin
+  cheque:
+    description: Cria um cheque fisico com o teu dinheiro

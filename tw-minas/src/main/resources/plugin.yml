@@ -1,0 +1,8 @@
+name: tw-minas
+version: 1.0
+main: br.com.tw.minas.TWMinasPlugin
+depend: [tw-core, tw-economia]
+commands:
+  mina:
+    description: Abre a Central de Mineracao
+    aliases: [minas]
