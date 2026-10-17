@@ -1,5 +1,6 @@
 package br.com.tw.lobby.listeners;
 
+import br.com.tw.core.TWCorePlugin;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -11,14 +12,12 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerToggleFlightEvent;
 
 public class DoubleJumpListener implements Listener {
-    private final String MINAS_WORLD = "minas";
-
     @EventHandler
     public void onMove(PlayerMoveEvent event) {
         Player player = event.getPlayer();
 
         // Ignora quem está no mundo das minas ou em criativo
-        if (player.getWorld().getName().equalsIgnoreCase(MINAS_WORLD)) return;
+        if (TWCorePlugin.getInstance().isMineWorld(player.getWorld().getName())) return;
         if (player.getGameMode() == GameMode.CREATIVE) return;
 
         // Se o jogador estiver no chão (bloco de baixo não é AR)
@@ -32,7 +31,7 @@ public class DoubleJumpListener implements Listener {
         Player player = event.getPlayer();
 
         // Ignora quem está no mundo das minas ou em criativo
-        if (player.getWorld().getName().equalsIgnoreCase(MINAS_WORLD)) return;
+        if (TWCorePlugin.getInstance().isMineWorld(player.getWorld().getName())) return;
         if (player.getGameMode() == GameMode.CREATIVE) return;
 
         // Cancela o voo normal

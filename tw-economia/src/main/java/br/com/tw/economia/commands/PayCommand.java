@@ -34,7 +34,7 @@ public class PayCommand implements CommandExecutor {
         double amount;
         try {
             amount = Double.parseDouble(args[1]);
-            if (amount <= 0) throw new NumberFormatException();
+            if (!Double.isFinite(amount) || amount <= 0) throw new NumberFormatException();
         } catch (NumberFormatException e) {
             player.sendMessage(ChatColor.RED + "Quantia inválida. Usa apenas números positivos.");
             return true;
@@ -43,16 +43,18 @@ public class PayCommand implements CommandExecutor {
         TWUser user = TWCorePlugin.getInstance().getUserManager().getUser(player.getUniqueId());
         TWUser targetUser = TWCorePlugin.getInstance().getUserManager().getUser(target.getUniqueId());
 
-        if (user != null && targetUser != null) {
-            if (user.removeBalance(amount)) {
-                targetUser.addBalance(amount);
-
-                String formatted = br.com.tw.core.utils.TWFormat.formatarDinheiro(amount);
-                player.sendMessage(ChatColor.GREEN + "Enviaste $" + formatted + " para " + target.getName() + ".");
-                target.sendMessage(ChatColor.GREEN + "Recebeste $" + formatted + " de " + player.getName() + ".");
-            } else {
-                player.sendMessage(ChatColor.RED + "Não tens saldo suficiente para esta transação.");
-            }
+        if (user == null || targetUser == null) {
+            player.sendMessage(ChatColor.RED + "Os dados de um dos jogadores ainda estão a ser carregados.");
+            return true;
+        }
+        if (user.transferBalanceTo(targetUser, amount)) {
+            TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
+            TWCorePlugin.getInstance().getUserManager().saveUserAsync(targetUser);
+            String formatted = br.com.tw.core.utils.TWFormat.formatarDinheiro(amount);
+            player.sendMessage(ChatColor.GREEN + "Enviaste $" + formatted + " para " + target.getName() + ".");
+            target.sendMessage(ChatColor.GREEN + "Recebeste $" + formatted + " de " + player.getName() + ".");
+        } else {
+            player.sendMessage(ChatColor.RED + "Não tens saldo suficiente para esta transação.");
         }
         return true;
     }

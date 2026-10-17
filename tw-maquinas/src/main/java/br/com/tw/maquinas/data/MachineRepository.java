@@ -7,6 +7,7 @@ import java.sql.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.logging.Level;
 
 public class MachineRepository {
 
@@ -25,25 +26,24 @@ public class MachineRepository {
                 "type_id VARCHAR(32) NOT NULL, " +
                 "stack_amount BIGINT DEFAULT 1, " +
                 "fuel BIGINT DEFAULT 0, " +
-                "stored_earnings DOUBLE DEFAULT 0.0, " +
+                "stored_earnings DOUBLE PRECISION DEFAULT 0.0, " +
                 "speed_level INT DEFAULT 1, " +
                 "storage_level INT DEFAULT 1, " +
                 "fuel_eff_level INT DEFAULT 1, " +
-                "total_generated DOUBLE DEFAULT 0.0" +
+                "total_generated DOUBLE PRECISION DEFAULT 0.0" +
                 ")";
 
         try (Connection conn = db.getConnection(); Statement stmt = conn.createStatement()) {
             stmt.execute(query);
 
-            // Tenta adicionar as colunas novas caso a tabela antiga já exista (Atualização Silenciosa)
-            try { stmt.execute("ALTER TABLE tw_machines ADD COLUMN speed_level INT DEFAULT 1"); } catch (SQLException ignored) {}
-            try { stmt.execute("ALTER TABLE tw_machines ADD COLUMN storage_level INT DEFAULT 1"); } catch (SQLException ignored) {}
-            try { stmt.execute("ALTER TABLE tw_machines ADD COLUMN fuel_eff_level INT DEFAULT 1"); } catch (SQLException ignored) {}
-            try { stmt.execute("ALTER TABLE tw_machines ADD COLUMN total_generated DOUBLE DEFAULT 0.0"); } catch (SQLException ignored) {}
-
+            stmt.execute("ALTER TABLE tw_machines ADD COLUMN IF NOT EXISTS speed_level INT DEFAULT 1");
+            stmt.execute("ALTER TABLE tw_machines ADD COLUMN IF NOT EXISTS storage_level INT DEFAULT 1");
+            stmt.execute("ALTER TABLE tw_machines ADD COLUMN IF NOT EXISTS fuel_eff_level INT DEFAULT 1");
+            stmt.execute("ALTER TABLE tw_machines ADD COLUMN IF NOT EXISTS total_generated DOUBLE PRECISION DEFAULT 0.0");
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw failure("Falha ao criar ou atualizar a tabela de máquinas.", e);
         }
+        db.recordSchemaVersion("tw_maquinas", 2);
     }
 
     public Map<String, PlacedMachine> loadAllMachines() {
@@ -72,7 +72,7 @@ public class MachineRepository {
             }
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw failure("Falha ao carregar as máquinas.", e);
         }
         return map;
     }
@@ -80,8 +80,10 @@ public class MachineRepository {
     public void saveMachine(PlacedMachine m) {
         String query = "INSERT INTO tw_machines (loc_key, owner_uuid, owner_name, type_id, stack_amount, fuel, stored_earnings, speed_level, storage_level, fuel_eff_level, total_generated) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
-                "ON DUPLICATE KEY UPDATE stack_amount=VALUES(stack_amount), fuel=VALUES(fuel), stored_earnings=VALUES(stored_earnings), " +
-                "speed_level=VALUES(speed_level), storage_level=VALUES(storage_level), fuel_eff_level=VALUES(fuel_eff_level), total_generated=VALUES(total_generated)";
+                "ON CONFLICT (loc_key) DO UPDATE SET stack_amount = EXCLUDED.stack_amount, fuel = EXCLUDED.fuel, " +
+                "stored_earnings = EXCLUDED.stored_earnings, speed_level = EXCLUDED.speed_level, " +
+                "storage_level = EXCLUDED.storage_level, fuel_eff_level = EXCLUDED.fuel_eff_level, " +
+                "total_generated = EXCLUDED.total_generated";
 
         try (Connection conn = db.getConnection(); PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, m.getLocationKey());
@@ -99,7 +101,7 @@ public class MachineRepository {
             ps.executeUpdate();
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw failure("Falha ao salvar máquina em " + m.getLocationKey() + ".", e);
         }
     }
 
@@ -110,7 +112,12 @@ public class MachineRepository {
             ps.setString(1, locKey);
             ps.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw failure("Falha ao remover máquina em " + locKey + ".", e);
         }
+    }
+
+    private IllegalStateException failure(String message, SQLException cause) {
+        db.getLogger().log(Level.SEVERE, message, cause);
+        return new IllegalStateException(message, cause);
     }
 }

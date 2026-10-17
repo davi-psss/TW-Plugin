@@ -5,8 +5,8 @@ import br.com.tw.maquinas.managers.MachineManager;
 import br.com.tw.maquinas.menus.MachinePanelMenu;
 import br.com.tw.maquinas.models.MachineType;
 import br.com.tw.maquinas.models.PlacedMachine;
+import br.com.tw.core.utils.TWItemTags;
 import org.bukkit.ChatColor;
-import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -20,6 +20,9 @@ import org.bukkit.event.block.BlockPistonRetractEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.event.world.ChunkLoadEvent;
+import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.List;
@@ -35,15 +38,24 @@ public class MachineListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onPlace(BlockPlaceEvent event) {
         ItemStack hand = event.getItemInHand();
-        if (hand == null || !hand.hasItemMeta() || !hand.getItemMeta().hasLore()) return;
+        if (hand == null) return;
 
-        List<String> lore = hand.getItemMeta().getLore();
-        String lastLine = ChatColor.stripColor(lore.get(lore.size() - 1));
-        if (!lastLine.startsWith("TWMACHINE:")) return;
+        String typeId;
+        long itemStack;
+        if (TWItemTags.has(hand, "tw_machine_type")) {
+            typeId = TWItemTags.getString(hand, "tw_machine_type");
+            itemStack = TWItemTags.getLong(hand, "tw_machine_stack", 0L);
+        } else {
+            String legacyData = getLegacyData(hand, "TWMACHINE:");
+            if (legacyData == null) return;
 
-        String[] split = lastLine.split(":");
-        String typeId = split[1];
-        long stackToPlace = Long.parseLong(split[2]) * hand.getAmount();
+            String[] split = legacyData.split(":");
+            if (split.length < 3) return;
+            typeId = split[1];
+            itemStack = parseLong(split[2], "máquina");
+        }
+        if (typeId == null || typeId.isEmpty() || itemStack <= 0) return;
+        long stackToPlace = itemStack * hand.getAmount();
 
         MachineType type = manager.getMachineTypes().get(typeId);
         if (type == null) return;
@@ -113,21 +125,29 @@ public class MachineListener implements Listener {
         Player player = event.getPlayer();
         ItemStack hand = player.getItemInHand();
 
-        if (hand != null && hand.hasItemMeta() && hand.getItemMeta().hasLore()) {
-            List<String> lore = hand.getItemMeta().getLore();
-            String lastLine = ChatColor.stripColor(lore.get(lore.size() - 1));
-
-            if (lastLine.startsWith("TWFUEL:")) {
+        if (hand != null) {
+            long fuelUnits;
+            if (TWItemTags.has(hand, "tw_fuel_units")) {
+                fuelUnits = TWItemTags.getLong(hand, "tw_fuel_units", 0L);
+            } else {
+                String legacyData = getLegacyData(hand, "TWFUEL:");
+                if (legacyData == null) {
+                    new MachinePanelMenu(player, machine).open();
+                    return;
+                }
+                String[] split = legacyData.split(":");
+                if (split.length < 2) return;
+                fuelUnits = parseLong(split[1], "combustível");
+            }
+            if (fuelUnits > 0) {
                 if (!machine.getOwnerUuid().equals(player.getUniqueId()) && !player.hasPermission("tw.admin")) {
                     player.sendMessage(ChatColor.RED + "Apenas o dono pode abastecer esta máquina!");
                     return;
                 }
 
-                long unitsPerItem = Long.parseLong(lastLine.split(":")[1]);
-
                 // NOVO: Se o jogador estiver no Shift, consome o pack inteiro. Se não, consome só 1.
                 int itemsToConsume = player.isSneaking() ? hand.getAmount() : 1;
-                long totalUnits = unitsPerItem * itemsToConsume;
+                long totalUnits = fuelUnits * itemsToConsume;
 
                 machine.addFuel(totalUnits);
                 manager.saveMachineAsync(machine);
@@ -179,17 +199,40 @@ public class MachineListener implements Listener {
     }
 
     @EventHandler
-    public void onChunkLoad(org.bukkit.event.world.ChunkLoadEvent event) {
-        for (PlacedMachine m : manager.getPlacedMachines().values()) {
-            org.bukkit.Location loc = m.getBukkitLocation();
-            if (loc != null && loc.getWorld().equals(event.getWorld())) {
-                if ((loc.getBlockX() >> 4) == event.getChunk().getX() && (loc.getBlockZ() >> 4) == event.getChunk().getZ()) {
-                    MachineType type = manager.getMachineTypes().get(m.getTypeId());
-                    if (type != null) {
-                        TWMaquinasPlugin.getInstance().getHologramManager().updateOrCreateHologram(m, type);
-                    }
-                }
-            }
+    public void onChunkLoad(ChunkLoadEvent event) {
+        TWMaquinasPlugin.getInstance().getHologramManager().refreshInChunk(
+                event.getChunk(), manager.getPlacedMachines().values(), manager.getMachineTypes());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onChunkUnload(ChunkUnloadEvent event) {
+        TWMaquinasPlugin.getInstance().getHologramManager().onChunkUnload(event.getChunk());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onWorldChange(PlayerTeleportEvent event) {
+        if (event.getTo() != null && !event.getFrom().getWorld().equals(event.getTo().getWorld())) {
+            TWMaquinasPlugin.getInstance().getHologramManager()
+                    .destroyForPlayer(event.getPlayer(), event.getFrom().getWorld());
+        }
+    }
+
+    private String getLegacyData(ItemStack item, String prefix) {
+        if (!item.hasItemMeta() || !item.getItemMeta().hasLore()) return null;
+        List<String> lore = item.getItemMeta().getLore();
+        if (lore.isEmpty()) return null;
+
+        String lastLine = ChatColor.stripColor(lore.get(lore.size() - 1));
+        return lastLine.startsWith(prefix) ? lastLine : null;
+    }
+
+    private long parseLong(String value, String itemName) {
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException e) {
+            TWMaquinasPlugin.getInstance().getLogger()
+                    .warning("Dados antigos inválidos no item de " + itemName + ": " + value);
+            return 0L;
         }
     }
 }

@@ -34,7 +34,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class MineracaoListener implements Listener {
 
-    private final String MINAS_WORLD = "minas";
     private final ComboManager comboManager;
     private final Map<UUID, Long> skillCooldowns = new ConcurrentHashMap<>();
 
@@ -52,7 +51,7 @@ public class MineracaoListener implements Listener {
     @EventHandler
     public void onInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
-        if (!player.getWorld().getName().equalsIgnoreCase(MINAS_WORLD)) return;
+        if (!TWCorePlugin.getInstance().isMineWorld(player.getWorld().getName())) return;
 
         // Interação com Presente Oculto dos Duendes
         if (event.getClickedBlock() != null && event.getClickedBlock().getType() == Material.ENDER_CHEST) {
@@ -74,7 +73,7 @@ public class MineracaoListener implements Listener {
     @SuppressWarnings("deprecation")
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
-        if (!player.getWorld().getName().equalsIgnoreCase(MINAS_WORLD)) return;
+        if (!TWCorePlugin.getInstance().isMineWorld(player.getWorld().getName())) return;
         if (player.getGameMode() == GameMode.CREATIVE) return;
 
         Block mainBlock = event.getBlock();

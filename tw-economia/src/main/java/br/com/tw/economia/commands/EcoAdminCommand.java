@@ -24,12 +24,17 @@ public class EcoAdminCommand implements CommandExecutor {
         }
 
         String acao = args[0].toLowerCase();
+        if (!acao.equals("give") && !acao.equals("add") && !acao.equals("take")
+                && !acao.equals("remove") && !acao.equals("set")) {
+            sender.sendMessage(ChatColor.RED + "Ação desconhecida. Utiliza: give, take ou set.");
+            return true;
+        }
         String targetName = args[1];
         double amount;
 
         try {
             amount = Double.parseDouble(args[2]);
-            if (amount < 0) throw new NumberFormatException();
+            if (!Double.isFinite(amount) || amount < 0) throw new NumberFormatException();
         } catch (NumberFormatException e) {
             sender.sendMessage(ChatColor.RED + "Quantia inválida. Use apenas números positivos.");
             return true;
@@ -43,11 +48,22 @@ public class EcoAdminCommand implements CommandExecutor {
             if (user != null) {
                 aplicarAcaoOnline(sender, user, acao, amount, target.getName());
                 TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
+            } else {
+                sender.sendMessage(ChatColor.RED + "Os dados do jogador ainda estão a ser carregados.");
             }
         } else {
             // Jogador está offline
             Bukkit.getScheduler().runTaskAsynchronously(TWCorePlugin.getInstance(), () -> {
-                boolean sucesso = TWCorePlugin.getInstance().getUserManager().updateOfflineBalance(targetName, amount, acao);
+                boolean sucesso;
+                try {
+                    sucesso = TWCorePlugin.getInstance().getUserManager().updateOfflineBalance(targetName, amount, acao);
+                } catch (IllegalStateException e) {
+                    TWCorePlugin.getInstance().getLogger().log(java.util.logging.Level.SEVERE,
+                            "Falha ao atualizar o saldo offline de " + targetName + ".", e);
+                    Bukkit.getScheduler().runTask(TWCorePlugin.getInstance(),
+                            () -> sender.sendMessage(ChatColor.RED + "Não foi possível atualizar o saldo agora."));
+                    return;
+                }
 
                 Bukkit.getScheduler().runTask(TWCorePlugin.getInstance(), () -> {
                     if (sucesso) {

@@ -7,7 +7,6 @@ import br.com.tw.ranks.TWRanksPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
-import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
@@ -22,12 +21,18 @@ public class RanksMenu implements TWMenu {
     private final Player player;
     private final TWUser user;
 
-    // Lista ordenada dos Ranks do servidor
-    private final List<String> rankOrder = Arrays.asList("CARVAO", "NEVE", "SINO", "BISCOITO", "DUENDE", "RENA", "TRENO", "QUEBRANOZES", "ESTRELA", "NOEL");
+    private final List<String> rankOrder;
 
     public RanksMenu(Player player) {
         this.player = player;
         this.user = TWCorePlugin.getInstance().getUserManager().getUser(player.getUniqueId());
+        this.rankOrder = new java.util.ArrayList<>();
+        for (String rank : TWCorePlugin.getInstance().getRankHierarchy()) {
+            if (!rank.equalsIgnoreCase("MAX")
+                    && TWRanksPlugin.getInstance().getRanksConfig().contains("ranks." + rank)) {
+                rankOrder.add(rank);
+            }
+        }
         this.inventory = Bukkit.createInventory(this, 54, ChatColor.DARK_GRAY + "Árvore de Evolução");
         setupItems();
     }

@@ -4,6 +4,7 @@ import br.com.tw.core.TWCorePlugin;
 import br.com.tw.core.data.TWUser;
 import br.com.tw.core.menus.TWMenu;
 import br.com.tw.core.utils.TWFormat;
+import br.com.tw.core.utils.TWMenuFrame;
 import br.com.tw.minas.TWMinasPlugin;
 import br.com.tw.minas.managers.MineEventManager;
 import org.bukkit.Bukkit;
@@ -50,6 +51,7 @@ public class MinaMainMenu implements TWMenu {
         inventory.setItem(15, createItem(Material.GOLD_INGOT, "§e§lRanking",
                 "§7Veja os melhores jogadores do servidor."));
         inventory.setItem(26, getPlayerStatsItem(player));
+        TWMenuFrame.apply(inventory);
     }
 
     @Override

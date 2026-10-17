@@ -9,7 +9,7 @@ public class TWFormat {
     private static final String[] SUFIXOS = new String[]{"", "K", "M", "B", "T", "Q", "QQ", "S", "SS"};
 
     // Força o formato PT-BR (ponto para milhares, vírgula para decimais)
-    private static final DecimalFormat FORMATADOR = new DecimalFormat("#,##0.00", new DecimalFormatSymbols(new Locale("pt", "BR")));
+    private static final DecimalFormat FORMATADOR = new DecimalFormat("#,##0.00", new DecimalFormatSymbols(Locale.forLanguageTag("pt-BR")));
 
     public static String formatarDinheiro(double valor) {
         if (valor < 1000) {

@@ -52,4 +52,11 @@ public class TWLobbyPlugin extends JavaPlugin {
         // Fallback: se não estiver setado, pega o spawn do mundo 0
         return Bukkit.getWorlds().get(0).getSpawnLocation();
     }
+
+    public String getLobbyWorldName() {
+        if (getConfig().contains("lobby.world")) {
+            return getConfig().getString("lobby.world");
+        }
+        return Bukkit.getWorlds().get(0).getName();
+    }
 }

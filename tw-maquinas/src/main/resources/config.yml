@@ -2,6 +2,9 @@ combustivel:
   preco-money: 5000.0
   unidades-por-compra: 100
 
+confirmation:
+  price-threshold: 250000.0
+
 maquinas:
   CARVAO:
     nome: "&8Máquina de Carvão"

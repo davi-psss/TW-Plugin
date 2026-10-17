@@ -31,6 +31,10 @@ public class BoosterCommand implements CommandExecutor {
 
         try {
             double multiplier = Double.parseDouble(args[0]);
+            if (!Double.isFinite(multiplier) || multiplier <= 0.0) {
+                sender.sendMessage(ChatColor.RED + "O multiplicador deve ser um número finito maior que zero.");
+                return true;
+            }
             plugin.setGlobalBooster(multiplier);
 
             Bukkit.broadcastMessage("");

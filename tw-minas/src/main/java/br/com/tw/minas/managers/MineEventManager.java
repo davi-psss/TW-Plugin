@@ -3,6 +3,7 @@ package br.com.tw.minas.managers;
 import br.com.tw.core.TWCorePlugin;
 import br.com.tw.core.data.TWUser;
 import br.com.tw.core.utils.TWFormat;
+import br.com.tw.core.utils.TWConfigValidation;
 import br.com.tw.minas.TWMinasPlugin;
 import br.com.tw.minas.utils.TWBossBar;
 import org.bukkit.Bukkit;
@@ -13,54 +14,102 @@ import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class MineEventManager {
+public class MineEventManager implements Listener {
 
-    private static final long COMMUNITY_GOAL = 5000L;
+    private final long communityGoal;
+    private final long happyHourDurationMillis;
+    private final double happyHourMultiplier;
+    private final double giftChance;
+    private final long giftLifetimeMillis;
+    private final double meteoriteChance;
+    private final int meteoriteHealth;
     private long communityProgress = 0L;
     private long happyHourEndTime = 0L;
 
     private final Map<Location, Long> activeGifts = new ConcurrentHashMap<>();
     private final Map<Location, Integer> activeMeteorites = new ConcurrentHashMap<>();
+    private final BukkitTask bossBarTask;
+    private final BukkitTask cleanupTask;
 
     private final Random random = new Random();
 
     public MineEventManager(TWMinasPlugin plugin) {
-        // Task 1: Atualização contínua da BossBar para quem está no mundo das minas
-        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            float progress = (float) communityProgress / COMMUNITY_GOAL;
-            String barMessage = isHappyHourActive()
-                    ? "§d§lHAPPY HOUR ATIVO! TUDO A 2.0x!"
-                    : "§b§lMETA COMUNITÁRIA: §e" + communityProgress + " §7/ §e" + COMMUNITY_GOAL + " blocos";
+        communityGoal = requireLongRange(plugin, "events.community-goal", 1L, 1_000_000_000L);
+        happyHourDurationMillis = requireLongRange(plugin, "events.happy-hour-seconds", 1L, 86400L) * 1000L;
+        happyHourMultiplier = TWConfigValidation.requireFiniteAtLeast(plugin,
+                "events.happy-hour-multiplier", plugin.getConfig().getDouble("events.happy-hour-multiplier", Double.NaN), 1.0);
+        giftChance = TWConfigValidation.requireProbability(plugin, "events.gift-chance",
+                plugin.getConfig().getDouble("events.gift-chance", Double.NaN));
+        giftLifetimeMillis = requireLongRange(plugin, "events.gift-lifetime-seconds", 1L, 3600L) * 1000L;
+        meteoriteChance = TWConfigValidation.requireProbability(plugin, "events.meteorite-chance",
+                plugin.getConfig().getDouble("events.meteorite-chance", Double.NaN));
+        meteoriteHealth = TWConfigValidation.requireIntRange(plugin, "events.meteorite-health",
+                plugin.getConfig().getInt("events.meteorite-health", -1), 1, 10000);
+        long actionBarTicks = requireLongRange(plugin, "events.actionbar-update-ticks", 1L, 1200L);
+        long cleanupTicks = requireLongRange(plugin, "events.cleanup-interval-ticks", 1L, 1200L);
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
+        bossBarTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            boolean happyHour = isHappyHourActive();
+            long remainingMillis = Math.max(0L, happyHourEndTime - System.currentTimeMillis());
+            float progress = happyHour
+                    ? Math.min(1.0f, (float) remainingMillis / happyHourDurationMillis)
+                    : Math.min(1.0f, (float) communityProgress / communityGoal);
+            String barMessage = happyHour
+                    ? "§d§lHAPPY HOUR §8» §f" + happyHourMultiplier + "x §8| §e" + formatTime(remainingMillis) + " restante"
+                    : "§b§lMETA DA MINA §8» §f" + communityProgress + "§7/§f" + communityGoal
+                            + " blocos §8| §e" + (int) (progress * 100) + "%";
 
             for (Player p : Bukkit.getOnlinePlayers()) {
-                if (p.getWorld().getName().equalsIgnoreCase("minas")) {
-                    TWBossBar.sendBossBar(p, barMessage, isHappyHourActive() ? 1.0f : progress);
+                if (TWCorePlugin.getInstance().isMineWorld(p.getWorld().getName())) {
+                    TWBossBar.sendBossBar(p, barMessage, progress);
                 } else {
                     TWBossBar.removeBossBar(p);
                 }
             }
-        }, 10L, 10L);
+        }, actionBarTicks, actionBarTicks);
 
-        // Task 2: Limpeza automática de Caixas dos Duendes que expiraram (12s)
-        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+        cleanupTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             long now = System.currentTimeMillis();
             for (Map.Entry<Location, Long> entry : activeGifts.entrySet()) {
+                Location loc = entry.getKey();
+                if (!loc.getWorld().isChunkLoaded(loc.getBlockX() >> 4, loc.getBlockZ() >> 4)) continue;
                 if (now > entry.getValue()) {
-                    Location loc = entry.getKey();
                     activeGifts.remove(loc);
                     if (loc.getBlock().getType() == Material.ENDER_CHEST) {
                         loc.getBlock().setType(Material.AIR);
                     }
                 }
             }
-        }, 20L, 20L);
+        }, cleanupTicks, cleanupTicks);
+    }
+
+    @EventHandler
+    public void onWorldChange(PlayerChangedWorldEvent event) {
+        if (TWCorePlugin.getInstance().isMineWorld(event.getFrom().getName())) {
+            TWBossBar.removeBossBar(event.getPlayer());
+        }
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        TWBossBar.removeBossBar(event.getPlayer());
+    }
+
+    private String formatTime(long millis) {
+        long seconds = (millis + 999L) / 1000L;
+        return (seconds / 60L) + ":" + String.format("%02d", seconds % 60L);
     }
 
     public boolean isHappyHourActive() {
@@ -68,7 +117,7 @@ public class MineEventManager {
     }
 
     public double getEventMultiplier() {
-        return isHappyHourActive() ? 2.0 : 1.0;
+        return isHappyHourActive() ? happyHourMultiplier : 1.0;
     }
 
     public long getCommunityProgress() {
@@ -76,19 +125,22 @@ public class MineEventManager {
     }
 
     public long getCommunityGoal() {
-        return COMMUNITY_GOAL;
+        return communityGoal;
     }
 
     public void addCommunityBlocks(Player triggerPlayer, Block brokenBlock, int count) {
+        if (count <= 0 || !TWCorePlugin.getInstance().isMineWorld(triggerPlayer.getWorld().getName())) return;
         if (!isHappyHourActive()) {
-            communityProgress += count;
-            if (communityProgress >= COMMUNITY_GOAL) {
+            communityProgress = Math.min(communityGoal, communityProgress + count);
+            if (communityProgress >= communityGoal) {
                 communityProgress = 0L;
-                happyHourEndTime = System.currentTimeMillis() + (3 * 60 * 1000L); // 3 minutos
+                happyHourEndTime = System.currentTimeMillis() + happyHourDurationMillis;
                 Bukkit.broadcastMessage("");
                 Bukkit.broadcastMessage(ChatColor.AQUA + "" + ChatColor.BOLD + "[TW-MINAS] " + ChatColor.YELLOW + "" + ChatColor.BOLD + "HAPPY HOUR NATALINO ATIVADO!");
-                Bukkit.broadcastMessage(ChatColor.GREEN + "A meta comunitária de " + COMMUNITY_GOAL + " blocos foi atingida!");
-                Bukkit.broadcastMessage(ChatColor.GOLD + "Todos os blocos e tokens nas minas valem " + ChatColor.BOLD + "2.0x" + ChatColor.GOLD + " pelos próximos 3 minutos!");
+                Bukkit.broadcastMessage(ChatColor.GREEN + "A meta comunitária de " + communityGoal + " blocos foi atingida!");
+                Bukkit.broadcastMessage(ChatColor.GOLD + "Todos os blocos e tokens nas minas valem "
+                        + ChatColor.BOLD + happyHourMultiplier + "x" + ChatColor.GOLD + " pelos próximos "
+                        + (happyHourDurationMillis / 60000L) + " minutos!");
                 Bukkit.broadcastMessage("");
                 for (Player p : Bukkit.getOnlinePlayers()) {
                     p.playSound(p.getLocation(), Sound.ENDERDRAGON_GROWL, 0.7f, 1.4f);
@@ -97,20 +149,21 @@ public class MineEventManager {
         }
 
         // 0.3% de chance de spawnar uma Caixa dos Duendes
-        if (random.nextDouble() < 0.003 && !activeGifts.containsKey(brokenBlock.getLocation()) && !activeMeteorites.containsKey(brokenBlock.getLocation())) {
+        if (random.nextDouble() < giftChance && !activeGifts.containsKey(brokenBlock.getLocation()) && !activeMeteorites.containsKey(brokenBlock.getLocation())) {
             Location loc = brokenBlock.getLocation();
             loc.getBlock().setType(Material.ENDER_CHEST);
-            activeGifts.put(loc, System.currentTimeMillis() + 12000L);
+            activeGifts.put(loc, System.currentTimeMillis() + giftLifetimeMillis);
 
             triggerPlayer.playSound(loc, Sound.CHEST_OPEN, 1f, 1.5f);
             triggerPlayer.sendMessage(ChatColor.LIGHT_PURPLE + "" + ChatColor.BOLD + "PRESENTE OCULTO! " +
-                    ChatColor.YELLOW + "Encontraste uma Caixa dos Duendes! Clica nela antes que desapareça (12s)!");
+                    ChatColor.YELLOW + "Encontraste uma Caixa dos Duendes! Clica nela antes que desapareça ("
+                            + (giftLifetimeMillis / 1000L) + "s)!");
         }
         // 0.04% de chance de spawnar um Meteorito Estelar
-        else if (random.nextDouble() < 0.0004 && !activeMeteorites.containsKey(brokenBlock.getLocation()) && !activeGifts.containsKey(brokenBlock.getLocation())) {
+        else if (random.nextDouble() < meteoriteChance && !activeMeteorites.containsKey(brokenBlock.getLocation()) && !activeGifts.containsKey(brokenBlock.getLocation())) {
             Location loc = brokenBlock.getLocation();
             loc.getBlock().setType(Material.SEA_LANTERN);
-            activeMeteorites.put(loc, 30);
+            activeMeteorites.put(loc, meteoriteHealth);
 
             loc.getWorld().playEffect(loc, Effect.EXPLOSION_LARGE, 0);
             triggerPlayer.playSound(loc, Sound.EXPLODE, 1f, 0.8f);
@@ -185,13 +238,27 @@ public class MineEventManager {
     }
 
     public void cleanupAll() {
+        bossBarTask.cancel();
+        cleanupTask.cancel();
+        TWBossBar.removeAll();
         for (Location loc : activeGifts.keySet()) {
-            loc.getBlock().setType(Material.AIR);
+            if (loc.getWorld().isChunkLoaded(loc.getBlockX() >> 4, loc.getBlockZ() >> 4)
+                    && loc.getBlock().getType() == Material.ENDER_CHEST) loc.getBlock().setType(Material.AIR);
         }
         for (Location loc : activeMeteorites.keySet()) {
-            loc.getBlock().setType(Material.AIR);
+            if (loc.getWorld().isChunkLoaded(loc.getBlockX() >> 4, loc.getBlockZ() >> 4)
+                    && loc.getBlock().getType() == Material.SEA_LANTERN) loc.getBlock().setType(Material.AIR);
         }
         activeGifts.clear();
         activeMeteorites.clear();
+    }
+
+    private long requireLongRange(TWMinasPlugin plugin, String path, long minimum, long maximum) {
+        long value = plugin.getConfig().getLong(path, -1L);
+        if (value < minimum || value > maximum) {
+            throw new IllegalArgumentException("Configuração inválida em " + path + ": permitido de "
+                    + minimum + " até " + maximum + ".");
+        }
+        return value;
     }
 }

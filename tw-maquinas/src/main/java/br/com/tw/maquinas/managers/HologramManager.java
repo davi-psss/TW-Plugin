@@ -1,13 +1,13 @@
 package br.com.tw.maquinas.managers;
 
 import br.com.tw.core.utils.TWFormat;
+import br.com.tw.core.utils.TWHologram;
 import br.com.tw.maquinas.TWMaquinasPlugin;
 import br.com.tw.maquinas.models.MachineType;
 import br.com.tw.maquinas.models.PlacedMachine;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,11 +16,11 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class HologramManager {
 
-    private final TWMaquinasPlugin plugin;
     private final Map<String, List<ArmorStand>> holograms = new ConcurrentHashMap<>();
+    private final TWHologram hologram;
 
     public HologramManager(TWMaquinasPlugin plugin) {
-        this.plugin = plugin;
+        this.hologram = new TWHologram(plugin);
     }
 
     public void updateOrCreateHologram(PlacedMachine machine, MachineType type) {
@@ -62,54 +62,67 @@ public class HologramManager {
 
         List<ArmorStand> stands = holograms.get(machine.getLocationKey());
 
-        if (stands == null || stands.size() != lines.size() || stands.stream().anyMatch(Entity::isDead)) {
+        if (stands == null || stands.size() != lines.size() || stands.stream().anyMatch(ArmorStand::isDead)) {
             removeHologram(machine.getLocationKey());
             stands = new ArrayList<>();
 
             double yOffset = 1.0 + (lines.size() * 0.28);
             for (String text : lines) {
                 Location lineLoc = loc.clone().add(0.5, yOffset, 0.5);
-                ArmorStand stand = (ArmorStand) loc.getWorld().spawnEntity(lineLoc, EntityType.ARMOR_STAND);
-                setupArmorStand(stand, text);
+                ArmorStand stand = hologram.spawn(lineLoc, text, machine.getLocationKey());
                 stands.add(stand);
                 yOffset -= 0.28;
             }
             holograms.put(machine.getLocationKey(), stands);
         } else {
             for (int i = 0; i < lines.size(); i++) {
-                stands.get(i).setCustomName(lines.get(i));
+                ArmorStand stand = stands.get(i);
+                if (!lines.get(i).equals(stand.getCustomName())) {
+                    stand.setCustomName(lines.get(i));
+                }
             }
         }
-    }
-
-    private void setupArmorStand(ArmorStand stand, String text) {
-        stand.setVisible(false);
-        stand.setGravity(false);
-        stand.setCanPickupItems(false);
-        stand.setCustomName(text);
-        stand.setCustomNameVisible(true);
-        stand.setMarker(true);
     }
 
     public void removeHologram(String locKey) {
-        List<ArmorStand> stands = holograms.remove(locKey);
-        if (stands != null) {
-            for (ArmorStand stand : stands) {
-                if (stand.isValid()) {
-                    stand.remove();
-                }
+        holograms.remove(locKey);
+        hologram.purgeAt(locKey);
+    }
+
+    public void onChunkUnload(Chunk chunk) {
+        hologram.removeChunkHolograms(chunk);
+        holograms.keySet().removeIf(key -> hologram.belongsToChunk(
+                key, chunk.getWorld().getName(), chunk.getX(), chunk.getZ()));
+    }
+
+    public void refreshInChunk(Chunk chunk, Iterable<PlacedMachine> machines, Map<String, MachineType> types) {
+        for (PlacedMachine machine : machines) {
+            if (!hologram.belongsToChunk(machine.getLocationKey(), chunk.getWorld().getName(),
+                    chunk.getX(), chunk.getZ())) continue;
+
+            MachineType type = types.get(machine.getTypeId());
+            if (type != null) {
+                removeHologram(machine.getLocationKey());
+                updateOrCreateHologram(machine, type);
             }
         }
     }
 
+    public void startOrphanCleanup(java.util.function.Predicate<String> locationExists) {
+        hologram.startOrphanCleanup(locationExists);
+    }
+
+    public void stopOrphanCleanup() {
+        hologram.stopOrphanCleanup();
+    }
+
+    public void destroyForPlayer(org.bukkit.entity.Player player, org.bukkit.World sourceWorld) {
+        hologram.destroyForPlayer(player, sourceWorld);
+    }
+
     public void clearAll() {
-        for (List<ArmorStand> stands : holograms.values()) {
-            for (ArmorStand stand : stands) {
-                if (stand.isValid()) {
-                    stand.remove();
-                }
-            }
-        }
+        hologram.stopOrphanCleanup();
+        hologram.removeAll();
         holograms.clear();
     }
 }

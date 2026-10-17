@@ -10,8 +10,7 @@
     <packaging>pom</packaging>
 
     <properties>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
+        <maven.compiler.release>8</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -93,44 +92,59 @@
                 <version>4.0.3</version>
                 <scope>compile</scope>
             </dependency>
+
+            <!-- PostgreSQL JDBC -->
+            <dependency>
+                <groupId>org.postgresql</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>42.7.4</version>
+                <scope>compile</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
     <build>
         <plugins>
-            <!-- Plugin para copiar os jars gerados para o servidor local -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-antrun-plugin</artifactId>
-                <version>1.8</version>
-                <executions>
-                    <execution>
-                        <phase>install</phase>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.14.1</version>
+                <configuration>
+                    <release>${maven.compiler.release}</release>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>deploy-local</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>1.8</version>
+                        <inherited>false</inherited>
                         <configuration>
                             <target>
-                                <echo message="====================================================" />
-                                <echo message="[TW-DEPLOY] Enviando plugins atualizados ao servidor..." />
-                                <echo message="====================================================" />
-
-                                <copy todir="C:/Users/SUPORTE/Desktop/CoreTech_Server/plugins" overwrite="true" verbose="true">
-                                    <!-- Busca os jars dentro da pasta target de cada submódulo -->
+                                <fail unless="tw.deploy.dir"
+                                       message="Informe -Dtw.deploy.dir com o caminho para a pasta plugins do servidor." />
+                                <available file="${tw.deploy.dir}" type="dir" property="tw.deploy.dir.exists" />
+                                <fail unless="tw.deploy.dir.exists"
+                                       message="A pasta de destino do deploy não existe: ${tw.deploy.dir}" />
+                                <echo message="[TW-DEPLOY] Copiando plugins para ${tw.deploy.dir}" />
+                                <copy todir="${tw.deploy.dir}" overwrite="true" verbose="true">
                                     <fileset dir="${project.basedir}">
-                                        <include name="tw-*/target/*.jar" />
-                                        <!-- Ignora os jars intermediários gerados pelo Maven Shade -->
-                                        <exclude name="**/original-*.jar" />
-                                        <exclude name="tw-*/target/*-sources.jar" />
+                                        <include name="tw-*/target/tw-*-${project.version}.jar" />
                                     </fileset>
-                                    <!-- Achata a estrutura para os jars caírem direto na raiz de /plugins -->
                                     <flattenmapper />
                                 </copy>
                             </target>
                         </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

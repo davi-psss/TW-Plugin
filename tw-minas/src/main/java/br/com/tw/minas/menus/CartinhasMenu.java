@@ -4,6 +4,7 @@ import br.com.tw.core.TWCorePlugin;
 import br.com.tw.core.data.TWUser;
 import br.com.tw.core.menus.TWMenu;
 import br.com.tw.core.utils.TWFormat;
+import br.com.tw.core.utils.TWMenuFrame;
 import br.com.tw.minas.TWMinasPlugin;
 import br.com.tw.minas.managers.CartinhasManager;
 import org.bukkit.Bukkit;
@@ -86,6 +87,7 @@ public class CartinhasMenu implements TWMenu {
         bMeta.setLore(Arrays.asList("§7Retornar à Central."));
         back.setItemMeta(bMeta);
         inventory.setItem(31, back);
+        TWMenuFrame.apply(inventory);
     }
 
     private String buildBar(long current, long max) {

@@ -1,6 +1,7 @@
 package br.com.tw.minas.menus;
 
 import br.com.tw.core.menus.TWMenu;
+import br.com.tw.core.utils.TWMenuFrame;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -76,6 +77,7 @@ public class CatalogoMenu implements TWMenu {
         }
 
         inventory.setItem(49, createItem(Material.WOOD_DOOR, 0, "§cVoltar", "§7Retornar à Central."));
+        TWMenuFrame.apply(inventory);
     }
 
     @Override

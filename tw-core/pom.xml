@@ -26,6 +26,17 @@
             <artifactId>HikariCP</artifactId>
             <scope>compile</scope>
         </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13.2</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <!-- Plugin do Maven Shade para embutir o HikariCP dentro do .jar do seu plugin -->
@@ -33,8 +44,16 @@
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.5.1</version>
+                <configuration>
+                    <forceCreation>true</forceCreation>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.4</version>
+                <version>3.6.2</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -68,6 +87,10 @@
                                 <relocation>
                                     <pattern>org.slf4j</pattern>
                                     <shadedPattern>br.com.tw.core.libs.slf4j</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.postgresql</pattern>
+                                    <shadedPattern>br.com.tw.core.libs.postgresql</shadedPattern>
                                 </relocation>
                             </relocations>
                         </configuration>

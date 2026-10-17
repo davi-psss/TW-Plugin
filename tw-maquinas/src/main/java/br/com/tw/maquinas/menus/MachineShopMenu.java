@@ -2,8 +2,10 @@ package br.com.tw.maquinas.menus;
 
 import br.com.tw.core.TWCorePlugin;
 import br.com.tw.core.data.TWUser;
+import br.com.tw.core.menus.TWConfirmationMenu;
 import br.com.tw.core.menus.TWMenu;
 import br.com.tw.core.utils.TWFormat;
+import br.com.tw.core.utils.TWMenuFrame;
 import br.com.tw.maquinas.TWMaquinasPlugin;
 import br.com.tw.maquinas.managers.MachineManager;
 import br.com.tw.maquinas.models.MachineType;
@@ -78,6 +80,7 @@ public class MachineShopMenu implements TWMenu {
         iMeta.setLore(Arrays.asList("§7Segura §eSHIFT §7e clica com o combustível", "§7na máquina para colocar tudo de uma vez!"));
         info.setItemMeta(iMeta);
         inventory.setItem(49, info);
+        TWMenuFrame.apply(inventory);
     }
 
     private ItemStack createFuelButton(String name, int units, double price) {
@@ -135,16 +138,10 @@ public class MachineShopMenu implements TWMenu {
                 return;
             }
 
-            double totalCost = type.getBuyCost() * amount;
-            if (user.removeBalance(totalCost)) {
-                TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
-                player.getInventory().addItem(manager.createMachineItem(type, amount));
-                player.playSound(player.getLocation(), Sound.LEVEL_UP, 1f, 1.5f);
-                player.sendMessage(ChatColor.GREEN + "Compraste " + amount + "x " + type.getDisplayName() + ChatColor.GREEN + " por $" + TWFormat.formatarDinheiro(totalCost) + "!");
-            } else {
-                player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
-                player.sendMessage(ChatColor.RED + "Faltam $" + TWFormat.formatarDinheiro(totalCost - user.getBalance()) + " para comprar " + amount + "x unidades.");
-            }
+            final long purchaseAmount = amount;
+            double totalCost = type.getBuyCost() * purchaseAmount;
+            confirmIfExpensive(totalCost, "Comprar " + purchaseAmount + "x " + type.getDisplayName(),
+                    () -> purchaseMachine(type, purchaseAmount, totalCost));
         }
     }
 
@@ -154,14 +151,53 @@ public class MachineShopMenu implements TWMenu {
             player.sendMessage(ChatColor.RED + "O teu inventário está cheio!");
             return;
         }
+        confirmIfExpensive(price, "Comprar " + units + " unidades de combustível",
+                () -> purchaseFuel(units, price));
+    }
+
+    private void purchaseMachine(MachineType type, long amount, double totalCost) {
+        if (user.removeBalance(totalCost)) {
+            TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
+            giveItem(manager.createMachineItem(type, amount));
+            player.playSound(player.getLocation(), Sound.LEVEL_UP, 1f, 1.5f);
+            player.sendMessage(ChatColor.GREEN + "Compraste " + amount + "x " + type.getDisplayName()
+                    + ChatColor.GREEN + " por $" + TWFormat.formatarDinheiro(totalCost) + "!");
+        } else {
+            player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+            player.sendMessage(ChatColor.RED + "Faltam $" + TWFormat.formatarDinheiro(totalCost - user.getBalance())
+                    + " para concluir a compra.");
+        }
+    }
+
+    private void purchaseFuel(int units, double price) {
         if (user.removeBalance(price)) {
             TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
-            player.getInventory().addItem(manager.createFuelItem(units));
+            giveItem(manager.createFuelItem(units));
             player.playSound(player.getLocation(), Sound.ORB_PICKUP, 1f, 1.2f);
             player.sendMessage(ChatColor.GREEN + "Compraste " + units + "x ciclos de Combustível!");
         } else {
             player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
             player.sendMessage(ChatColor.RED + "Não tens saldo suficiente!");
+        }
+    }
+
+    private void confirmIfExpensive(double price, String description, Runnable purchase) {
+        double threshold = TWMaquinasPlugin.getInstance().getConfig().getDouble("confirmation.price-threshold", 250000.0);
+        if (!Double.isFinite(threshold) || threshold < 0.0) {
+            throw new IllegalStateException("Valor inválido em confirmation.price-threshold.");
+        }
+        if (price >= threshold) {
+            new TWConfirmationMenu(player, description + " por $" + TWFormat.formatarDinheiro(price) + "?",
+                    purchase).open();
+        } else {
+            purchase.run();
+        }
+    }
+
+    private void giveItem(ItemStack item) {
+        java.util.Map<Integer, ItemStack> leftovers = player.getInventory().addItem(item);
+        for (ItemStack leftover : leftovers.values()) {
+            player.getWorld().dropItemNaturally(player.getLocation(), leftover);
         }
     }
 

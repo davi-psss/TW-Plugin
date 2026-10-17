@@ -2,6 +2,7 @@ package br.com.tw.lobby.listeners;
 
 import br.com.tw.lobby.TWLobbyPlugin;
 import br.com.tw.lobby.managers.InventoryManager;
+import br.com.tw.core.TWCorePlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -17,8 +18,6 @@ import org.bukkit.event.player.PlayerQuitEvent;
 public class MundoListener implements Listener {
 
     private final InventoryManager inventoryManager;
-    private final String MINAS_WORLD = "minas";
-
     public MundoListener(InventoryManager inventoryManager) {
         this.inventoryManager = inventoryManager;
     }
@@ -29,12 +28,12 @@ public class MundoListener implements Listener {
         String to = player.getWorld().getName();
         String from = event.getFrom().getName();
 
-        if (to.equalsIgnoreCase(MINAS_WORLD)) {
+        if (TWCorePlugin.getInstance().isMineWorld(to)) {
             // Entrou na mina: Salva e entrega picareta instantaneamente
             inventoryManager.saveAndClearInventory(player);
             player.sendMessage(ChatColor.AQUA + "⚒ Os teus itens foram guardados no Lobby.");
 
-        } else if (from.equalsIgnoreCase(MINAS_WORLD)) {
+        } else if (TWCorePlugin.getInstance().isMineWorld(from)) {
             // SAIU DA MINA: Adicionamos um delay de meio segundo (10 ticks)
             // Isto garante que o Essentials termina o teleporte ANTES de mexermos no inventário
             Bukkit.getScheduler().runTaskLater(TWLobbyPlugin.getInstance(), () -> {
@@ -62,7 +61,7 @@ public class MundoListener implements Listener {
         Bukkit.getScheduler().runTaskLater(TWLobbyPlugin.getInstance(), () -> {
             if (!player.isOnline()) return;
 
-            if (player.getWorld().getName().equalsIgnoreCase(MINAS_WORLD)) {
+            if (TWCorePlugin.getInstance().isMineWorld(player.getWorld().getName())) {
                 // 1. Puxa ele para o Lobby principal
                 Location spawn = TWLobbyPlugin.getInstance().getLobbyLocation();
                 player.teleport(spawn);
@@ -90,7 +89,7 @@ public class MundoListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        if (player.getWorld().getName().equalsIgnoreCase(MINAS_WORLD)) {
+        if (TWCorePlugin.getInstance().isMineWorld(player.getWorld().getName())) {
             // Remove a picareta assim que o jogador desconecta
             player.getInventory().clear();
             player.getInventory().setArmorContents(null);

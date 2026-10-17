@@ -96,4 +96,11 @@ public class PlacedMachine {
 
     public double getTotalGenerated() { return totalGenerated; }
     public void addTotalGenerated(double amount) { this.totalGenerated += amount; }
+
+    public PlacedMachine snapshot() {
+        PlacedMachine copy = new PlacedMachine(locationKey, ownerUuid, ownerName, typeId, stackAmount, fuel,
+                storedEarnings, speedLevel, storageLevel, fuelEfficiencyLevel, totalGenerated);
+        copy.setLastTickEpochSeconds(lastTickEpochSeconds);
+        return copy;
+    }
 }

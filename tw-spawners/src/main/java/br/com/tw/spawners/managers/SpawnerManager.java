@@ -3,6 +3,9 @@ package br.com.tw.spawners.managers;
 import br.com.tw.core.TWCorePlugin;
 import br.com.tw.core.data.TWUser;
 import br.com.tw.core.utils.TWFormat;
+import br.com.tw.core.utils.TWItemTags;
+import br.com.tw.core.utils.TWAsyncTaskQueue;
+import br.com.tw.core.utils.TWConfigValidation;
 import br.com.tw.economia.TWEconomiaPlugin;
 import br.com.tw.spawners.TWSpawnersPlugin;
 import br.com.tw.spawners.data.SpawnerRepository;
@@ -38,15 +41,28 @@ public class SpawnerManager {
 
     private final TWSpawnersPlugin plugin;
     private final SpawnerRepository repository;
+    private final TWAsyncTaskQueue saveQueue;
     private final Map<String, SpawnerType> spawnerTypes = new LinkedHashMap<>();
     private final Map<String, PlacedSpawner> placedSpawners = new ConcurrentHashMap<>();
-    private final List<String> rankHierarchy = Arrays.asList(
-            "CARVAO", "NEVE", "SINO", "BISCOITO", "DUENDE", "RENA", "TRENO", "QUEBRANOZES", "ESTRELA", "NOEL", "MAX"
-    );
+    private final List<String> rankHierarchy;
+    private final int maxSpawnPerCycle;
+    private final int maxEntitiesPerSpawner;
+    private final int maxStackPurchase;
+    private final Set<String> loggedProcessingFailures = ConcurrentHashMap.newKeySet();
 
     public SpawnerManager(TWSpawnersPlugin plugin, SpawnerRepository repository) {
         this.plugin = plugin;
         this.repository = repository;
+        this.saveQueue = new TWAsyncTaskQueue(plugin, "tw-spawners-db");
+        this.rankHierarchy = TWCorePlugin.getInstance().getRankHierarchy();
+        ConfigurationSection limits = plugin.getConfig().getConfigurationSection("limits");
+        if (limits == null) throw new IllegalArgumentException("Configuração inválida: seção limits ausente.");
+        this.maxSpawnPerCycle = TWConfigValidation.requireIntRange(plugin, "limits.max-spawn-per-cycle",
+                limits.getInt("max-spawn-per-cycle", 1000), 1, 10000);
+        this.maxEntitiesPerSpawner = TWConfigValidation.requireIntRange(plugin, "limits.max-entities-per-spawner",
+                limits.getInt("max-entities-per-spawner", 32), 1, 100);
+        this.maxStackPurchase = TWConfigValidation.requireIntRange(plugin, "limits.max-stack-purchase",
+                limits.getInt("max-stack-purchase", 1000), 1, 100000);
         loadConfigTypes();
         this.placedSpawners.putAll(repository.loadAllSpawners());
         startSpawnerTask();
@@ -63,14 +79,34 @@ public class SpawnerManager {
     public void loadConfigTypes() {
         spawnerTypes.clear();
         ConfigurationSection sec = plugin.getConfig().getConfigurationSection("spawners");
-        if (sec == null) return;
+        if (sec == null || sec.getKeys(false).isEmpty()) {
+            throw new IllegalArgumentException("Configuração inválida em spawners: é necessário definir ao menos um tipo.");
+        }
         for (String key : sec.getKeys(false)) {
-            String name = sec.getString(key + ".nome", "&eGerador");
-            EntityType entityType = EntityType.valueOf(sec.getString(key + ".entidade", "PIG").toUpperCase());
-            String reqRank = sec.getString(key + ".rank-necessario", "CARVAO");
-            double cost = sec.getDouble(key + ".custo-compra", 100000.0);
-            double valKill = sec.getDouble(key + ".valor-por-kill", 500.0);
-            double tokenChance = sec.getDouble(key + ".chance-token", 0.15);
+            String name = TWConfigValidation.requireText(plugin, "spawners." + key + ".nome",
+                    sec.getString(key + ".nome"));
+            String entityName = TWConfigValidation.requireText(plugin, "spawners." + key + ".entidade",
+                    sec.getString(key + ".entidade"));
+            EntityType entityType;
+            try {
+                entityType = EntityType.valueOf(entityName.toUpperCase(java.util.Locale.ROOT));
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Entidade inválida em spawners." + key + ".entidade: " + entityName, e);
+            }
+            if (!entityType.isAlive()) {
+                throw new IllegalArgumentException("Entidade de spawner não viva em spawners." + key + ".entidade.");
+            }
+            String reqRank = TWConfigValidation.requireText(plugin, "spawners." + key + ".rank-necessario",
+                    sec.getString(key + ".rank-necessario"));
+            if (!rankHierarchy.contains(reqRank.toUpperCase(java.util.Locale.ROOT))) {
+                throw new IllegalArgumentException("Rank desconhecido em spawners." + key + ".rank-necessario: " + reqRank);
+            }
+            double cost = TWConfigValidation.requireFiniteAtLeast(plugin, "spawners." + key + ".custo-compra",
+                    sec.getDouble(key + ".custo-compra", Double.NaN), 0.0);
+            double valKill = TWConfigValidation.requireFiniteAtLeast(plugin, "spawners." + key + ".valor-por-kill",
+                    sec.getDouble(key + ".valor-por-kill", Double.NaN), 0.0);
+            double tokenChance = TWConfigValidation.requireProbability(plugin, "spawners." + key + ".chance-token",
+                    sec.getDouble(key + ".chance-token", Double.NaN));
             spawnerTypes.put(key.toUpperCase(), new SpawnerType(key, name, entityType, reqRank, cost, valKill, tokenChance));
         }
     }
@@ -82,63 +118,87 @@ public class SpawnerManager {
                 long nowSec = System.currentTimeMillis() / 1000L;
 
                 for (PlacedSpawner spawner : placedSpawners.values()) {
-                    SpawnerType type = spawnerTypes.get(spawner.getTypeId());
-                    if (type == null) continue;
-
-                    Location loc = spawner.getBukkitLocation();
-                    if (loc == null || !loc.getWorld().isChunkLoaded(loc.getBlockX() >> 4, loc.getBlockZ() >> 4)) continue;
-
-                    double currentBooster = spawner.hasActiveBooster() ? spawner.getBoosterMultiplier() : 1.0;
-                    double baseCycle = 10.0 - ((spawner.getSpeedLevel() - 1) * 0.5);
-                    double realCycleSeconds = Math.max(1.0, baseCycle / currentBooster);
-
-                    if (nowSec - spawner.getLastSpawnTime() >= realCycleSeconds) {
-                        spawner.setLastSpawnTime(nowSec);
-                        long spawnAmount = spawner.getStackAmount() * spawner.getAmountLevel();
-
-                        if (spawner.isVirtualMode()) {
-                            double lootBonus = 1.0 + ((spawner.getLootLevel() - 1) * 0.10);
-                            double moneyGenerated = type.getValuePerKill() * spawnAmount * lootBonus * currentBooster;
-
-                            long tokensGenerated = 0;
-                            long soulsGenerated = 0;
-                            long xpGenerated = (long) (spawnAmount * 2 * currentBooster);
-
-                            double tokenChanceBase = type.getTokenChance() * (1.0 + ((spawner.getLootLevel() - 1) * 0.05)) * currentBooster;
-                            double soulChanceBase = 0.001 * currentBooster;
-
-                            for (int i = 0; i < spawnAmount; i++) {
-                                if (Math.random() < tokenChanceBase) tokensGenerated++;
-                                if (Math.random() < soulChanceBase) soulsGenerated++;
-                            }
-
-                            spawner.addStoredMoney(moneyGenerated);
-                            spawner.addStoredTokens(tokensGenerated);
-                            spawner.addStoredXp(xpGenerated);
-                            spawner.addStoredSouls(soulsGenerated);
-                            spawner.addTotalKills(spawnAmount);
-
-                            playVirtualEffects(loc, type);
-                        } else {
-                            boolean playerNear = false;
-                            for (Entity e : loc.getWorld().getNearbyEntities(loc, 16, 16, 16)) {
-                                if (e instanceof Player) { playerNear = true; break; }
-                            }
-                            if (playerNear) {
-                                spawnOrStackEntity(loc, type, spawnAmount, spawner.getLootLevel());
-                                spawner.addTotalKills(spawnAmount);
-                            }
+                    try {
+                        processSpawner(spawner, nowSec);
+                    } catch (RuntimeException e) {
+                        if (loggedProcessingFailures.add(spawner.getLocationKey())) {
+                            plugin.getLogger().log(java.util.logging.Level.SEVERE,
+                                    "Falha ao processar spawner em " + spawner.getLocationKey() + ".", e);
                         }
                     }
-                    plugin.getHologramManager().updateOrCreateHologram(spawner, type);
                 }
+            }
+
+            private void processSpawner(PlacedSpawner spawner, long nowSec) {
+                SpawnerType type = spawnerTypes.get(spawner.getTypeId());
+                if (type == null) return;
+
+                Location loc = spawner.getBukkitLocation();
+                if (loc == null || !loc.getWorld().isChunkLoaded(loc.getBlockX() >> 4, loc.getBlockZ() >> 4)) return;
+
+                double currentBooster = spawner.hasActiveBooster() ? spawner.getBoosterMultiplier() : 1.0;
+                double baseCycle = 10.0 - ((spawner.getSpeedLevel() - 1) * 0.5);
+                double realCycleSeconds = Math.max(1.0, baseCycle / currentBooster);
+
+                if (nowSec - spawner.getLastSpawnTime() >= realCycleSeconds) {
+                    spawner.setLastSpawnTime(nowSec);
+                    long spawnAmount = cappedSpawnAmount(spawner);
+                    if (spawnAmount <= 0L) return;
+
+                    if (spawner.isVirtualMode()) {
+                        double lootBonus = 1.0 + ((spawner.getLootLevel() - 1) * 0.10);
+                        double moneyGenerated = type.getValuePerKill() * spawnAmount * lootBonus * currentBooster;
+                        if (!Double.isFinite(moneyGenerated)) {
+                            throw new IllegalStateException("Produção de dinheiro excedeu o limite numérico.");
+                        }
+
+                        long tokensGenerated = 0;
+                        long soulsGenerated = 0;
+                        long xpGenerated = (long) (spawnAmount * 2 * currentBooster);
+
+                        double tokenChanceBase = Math.min(1.0, type.getTokenChance()
+                                * (1.0 + ((spawner.getLootLevel() - 1) * 0.05)) * currentBooster);
+                        double soulChanceBase = Math.min(1.0, 0.001 * currentBooster);
+
+                        for (int i = 0; i < spawnAmount; i++) {
+                            if (Math.random() < tokenChanceBase) tokensGenerated++;
+                            if (Math.random() < soulChanceBase) soulsGenerated++;
+                        }
+
+                        spawner.addStoredMoney(moneyGenerated);
+                        spawner.addStoredTokens(tokensGenerated);
+                        spawner.addStoredXp(xpGenerated);
+                        spawner.addStoredSouls(soulsGenerated);
+                        spawner.addTotalKills(spawnAmount);
+
+                        playVirtualEffects(loc, type);
+                    } else {
+                        boolean playerNear = false;
+                        for (Entity e : loc.getWorld().getNearbyEntities(loc, 16, 16, 16)) {
+                            if (e instanceof Player) { playerNear = true; break; }
+                        }
+                        if (playerNear) {
+                            spawnOrStackEntity(loc, type, spawnAmount, spawner.getLootLevel());
+                            spawner.addTotalKills(spawnAmount);
+                        }
+                    }
+                }
+                plugin.getHologramManager().updateOrCreateHologram(spawner, type);
+            }
+
+            private long cappedSpawnAmount(PlacedSpawner spawner) {
+                long stackAmount = Math.max(0L, spawner.getStackAmount());
+                long amountLevel = Math.max(0, spawner.getAmountLevel());
+                if (stackAmount == 0L || amountLevel == 0L) return 0L;
+                if (stackAmount > maxSpawnPerCycle / amountLevel) return maxSpawnPerCycle;
+                return stackAmount * amountLevel;
             }
         }.runTaskTimer(plugin, 20L, 20L);
 
         new BukkitRunnable() {
             @Override
-            public void run() { saveAllSync(); }
-        }.runTaskTimerAsynchronously(plugin, 72000L, 72000L);
+            public void run() { saveAllAsync(); }
+        }.runTaskTimer(plugin, 72000L, 72000L);
     }
 
     private void startAutoSellTask() {
@@ -146,20 +206,33 @@ public class SpawnerManager {
             @Override
             public void run() {
                 for (PlacedSpawner spawner : placedSpawners.values()) {
-                    if (spawner.isVirtualMode() && spawner.isAutoSell() && (spawner.getStoredMoney() > 0 || spawner.getStoredTokens() > 0)) {
-                        Player p = Bukkit.getPlayer(spawner.getOwnerUuid());
-                        if (p != null && p.isOnline()) {
-                            TWUser user = TWCorePlugin.getInstance().getUserManager().getUser(p.getUniqueId());
-                            if (user != null) {
-                                double prestigeMult = getPrestigeMultiplier(user.getPrestigeId());
-                                double globalBooster = TWEconomiaPlugin.getInstance().getGlobalBooster();
+                    try {
+                        if (spawner.isVirtualMode() && spawner.isAutoSell()
+                                && (spawner.getStoredMoney() > 0 || spawner.getStoredTokens() > 0)) {
+                            Player p = Bukkit.getPlayer(spawner.getOwnerUuid());
+                            if (p != null && p.isOnline()) {
+                                TWUser user = TWCorePlugin.getInstance().getUserManager().getUser(p.getUniqueId());
+                                if (user != null) {
+                                    double prestigeMult = getPrestigeMultiplier(user.getPrestigeId());
+                                    double globalBooster = TWEconomiaPlugin.getInstance().getGlobalBooster();
+                                    double payout = spawner.getStoredMoney() * prestigeMult * globalBooster;
+                                    if (!Double.isFinite(payout)) {
+                                        throw new IllegalStateException("Auto-sell excedeu o limite numérico.");
+                                    }
 
-                                user.addBalance(spawner.getStoredMoney() * prestigeMult * globalBooster);
-                                user.addTokens(spawner.getStoredTokens());
-
-                                spawner.setStoredMoney(0);
-                                spawner.setStoredTokens(0);
+                                    user.addBalance(payout);
+                                    user.addTokens(spawner.getStoredTokens());
+                                    spawner.setStoredMoney(0);
+                                    spawner.setStoredTokens(0);
+                                    TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
+                                    saveSpawnerAsync(spawner);
+                                }
                             }
+                        }
+                    } catch (RuntimeException e) {
+                        if (loggedProcessingFailures.add("autosell:" + spawner.getLocationKey())) {
+                            plugin.getLogger().log(java.util.logging.Level.SEVERE,
+                                    "Falha no auto-sell do spawner em " + spawner.getLocationKey() + ".", e);
                         }
                     }
                 }
@@ -175,15 +248,22 @@ public class SpawnerManager {
 
     public void spawnOrStackEntity(Location spawnerLoc, SpawnerType type, long amountToAdd, int lootLevel) {
         Location spawnPoint = spawnerLoc.clone().add(1.5, 0.0, 0.5);
+        int matchingEntities = 0;
+        LivingEntity stackTarget = null;
         for (Entity nearby : spawnPoint.getWorld().getNearbyEntities(spawnPoint, 6, 4, 6)) {
             if (nearby instanceof LivingEntity && nearby.getType() == type.getEntityType() && !nearby.isDead()) {
                 if (nearby.hasMetadata(META_STACK)) {
-                    long currentStack = nearby.getMetadata(META_STACK).get(0).asLong();
-                    updateEntityStack((LivingEntity) nearby, type, currentStack + amountToAdd, lootLevel, spawnPoint);
-                    return;
+                    matchingEntities++;
+                    if (stackTarget == null) stackTarget = (LivingEntity) nearby;
                 }
             }
         }
+        if (stackTarget != null) {
+            long currentStack = stackTarget.getMetadata(META_STACK).get(0).asLong();
+            updateEntityStack(stackTarget, type, currentStack + amountToAdd, lootLevel, spawnPoint);
+            return;
+        }
+        if (matchingEntities >= maxEntitiesPerSpawner) return;
         LivingEntity entity = (LivingEntity) spawnPoint.getWorld().spawnEntity(spawnPoint, type.getEntityType());
         entity.setRemoveWhenFarAway(true);
         entity.setCanPickupItems(false);
@@ -209,13 +289,7 @@ public class SpawnerManager {
     }
 
     public double getPrestigeMultiplier(String prestigeId) {
-        if (prestigeId == null) return 1.0;
-        switch (prestigeId.toUpperCase()) {
-            case "KRAMPUS": return 3.0;
-            case "YETI": return 2.0;
-            case "GRINCH": return 1.5;
-            default: return 1.0;
-        }
+        return TWCorePlugin.getInstance().getPrestigeMultiplier(prestigeId);
     }
 
     // =========================================================================
@@ -258,7 +332,14 @@ public class SpawnerManager {
 
         meta.setLore(lore);
         item.setItemMeta(meta);
-        return item;
+        Map<String, Object> tags = new HashMap<>();
+        tags.put("tw_spawner_type", type.getId());
+        tags.put("tw_spawner_stack", amount);
+        tags.put("tw_spawner_speed", speed);
+        tags.put("tw_spawner_loot", loot);
+        tags.put("tw_spawner_amount", amtLvl);
+        tags.put("tw_spawner_auto_sell", autoSell);
+        return TWItemTags.set(item, tags);
     }
 
     public ItemStack createBoosterItem(double multiplier, int minutes) {
@@ -276,7 +357,11 @@ public class SpawnerManager {
                 "§0TWBOOSTER:" + multiplier + ":" + minutes
         ));
         item.setItemMeta(meta);
-        return item;
+        Map<String, Object> tags = new HashMap<>();
+        tags.put("tw_spawner_booster", true);
+        tags.put("tw_booster_multiplier", multiplier);
+        tags.put("tw_booster_minutes", minutes);
+        return TWItemTags.set(item, tags);
     }
 
     public ItemStack createSoulItem(long amount) {
@@ -318,19 +403,33 @@ public class SpawnerManager {
     public void removeSpawner(Location loc) {
         String key = PlacedSpawner.toKey(loc);
         placedSpawners.remove(key);
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> repository.deleteSpawner(key));
+        saveQueue.submit("Falha ao remover spawner " + key + " do banco.", () -> repository.deleteSpawner(key));
     }
 
     public void saveSpawnerAsync(PlacedSpawner spawner) {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> repository.saveSpawner(spawner));
+        PlacedSpawner snapshot = spawner.snapshot();
+        saveQueue.submit("Falha ao salvar spawner " + snapshot.getLocationKey() + " no banco.",
+                () -> repository.saveSpawner(snapshot));
     }
 
     public void saveAllSync() {
         for (PlacedSpawner s : placedSpawners.values()) {
-            repository.saveSpawner(s);
+            PlacedSpawner snapshot = s.snapshot();
+            saveQueue.submit("Falha ao salvar spawner " + snapshot.getLocationKey() + " no banco.",
+                    () -> repository.saveSpawner(snapshot));
+        }
+        saveQueue.shutdownAndAwait();
+    }
+
+    private void saveAllAsync() {
+        for (PlacedSpawner spawner : placedSpawners.values()) {
+            PlacedSpawner snapshot = spawner.snapshot();
+            saveQueue.submit("Falha ao salvar spawner " + snapshot.getLocationKey() + " no banco.",
+                    () -> repository.saveSpawner(snapshot));
         }
     }
 
     public Map<String, SpawnerType> getSpawnerTypes() { return spawnerTypes; }
     public Map<String, PlacedSpawner> getPlacedSpawners() { return placedSpawners; }
+    public int getMaxStackPurchase() { return maxStackPurchase; }
 }

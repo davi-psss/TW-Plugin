@@ -2,8 +2,10 @@ package br.com.tw.spawners.menus;
 
 import br.com.tw.core.TWCorePlugin;
 import br.com.tw.core.data.TWUser;
+import br.com.tw.core.menus.TWConfirmationMenu;
 import br.com.tw.core.menus.TWMenu;
 import br.com.tw.core.utils.TWFormat;
+import br.com.tw.core.utils.TWMenuFrame;
 import br.com.tw.spawners.TWSpawnersPlugin;
 import br.com.tw.spawners.listeners.SpawnerListener;
 import br.com.tw.spawners.managers.SpawnerManager;
@@ -70,6 +72,7 @@ public class SpawnerShopMenu implements TWMenu {
         inventory.setItem(38, createBoosterButton("§bBooster Menor §7(1.5x)", 1.5, 30, 250000.0));
         inventory.setItem(40, createBoosterButton("§aBooster Médio §7(2.0x)", 2.0, 60, 1000000.0));
         inventory.setItem(42, createBoosterButton("§dBooster Divino §7(3.0x)", 3.0, 60, 5000000.0));
+        TWMenuFrame.apply(inventory);
     }
 
     private ItemStack createBoosterButton(String name, double mult, int mins, double price) {
@@ -101,9 +104,9 @@ public class SpawnerShopMenu implements TWMenu {
         if (user == null) return;
         int slot = event.getSlot();
 
-        if (slot == 38) buyBooster(1.5, 30, 250000.0);
-        if (slot == 40) buyBooster(2.0, 60, 1000000.0);
-        if (slot == 42) buyBooster(3.0, 60, 5000000.0);
+        if (slot == 38) confirmPurchase(250000.0, "Comprar booster 1.5x", () -> buyBooster(1.5, 30, 250000.0));
+        if (slot == 40) confirmPurchase(1000000.0, "Comprar booster 2x", () -> buyBooster(2.0, 60, 1000000.0));
+        if (slot == 42) confirmPurchase(5000000.0, "Comprar booster 3x", () -> buyBooster(3.0, 60, 5000000.0));
 
         SpawnerType type = slotMap.get(slot);
         if (type != null) {
@@ -126,16 +129,40 @@ public class SpawnerShopMenu implements TWMenu {
                 return;
             }
 
-            double totalCost = type.getBuyCost() * 1;
-            if (user.removeBalance(totalCost)) {
-                TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
-                player.getInventory().addItem(manager.createSpawnerItem(type, 1));
-                player.playSound(player.getLocation(), Sound.LEVEL_UP, 1f, 1.5f);
-                player.sendMessage(ChatColor.GREEN + "Compraste 1x " + type.getDisplayName() + ChatColor.GREEN + "!");
-            } else {
-                player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
-                player.sendMessage(ChatColor.RED + "Faltam $" + TWFormat.formatarDinheiro(totalCost - user.getBalance()) + ".");
+            double totalCost = type.getBuyCost();
+            confirmPurchase(totalCost, "Comprar 1x " + type.getDisplayName(),
+                    () -> purchaseSpawner(type, 1, totalCost));
+        }
+    }
+
+    private void purchaseSpawner(SpawnerType type, long amount, double price) {
+        if (user.removeBalance(price)) {
+            TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
+            java.util.Map<Integer, ItemStack> leftovers =
+                    player.getInventory().addItem(manager.createSpawnerItem(type, amount));
+            for (ItemStack leftover : leftovers.values()) {
+                player.getWorld().dropItemNaturally(player.getLocation(), leftover);
             }
+            player.playSound(player.getLocation(), Sound.LEVEL_UP, 1f, 1.5f);
+            player.sendMessage(ChatColor.GREEN + "Compraste " + amount + "x " + type.getDisplayName()
+                    + ChatColor.GREEN + " por $" + TWFormat.formatarDinheiro(price) + "!");
+        } else {
+            player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+            player.sendMessage(ChatColor.RED + "Faltam $" + TWFormat.formatarDinheiro(price - user.getBalance()) + ".");
+        }
+    }
+
+    private void confirmPurchase(double price, String description, Runnable purchase) {
+        double threshold = TWSpawnersPlugin.getInstance().getConfig()
+                .getDouble("confirmation.price-threshold", 250000.0);
+        if (!Double.isFinite(threshold) || threshold < 0.0) {
+            throw new IllegalStateException("Valor inválido em confirmation.price-threshold.");
+        }
+        if (price >= threshold) {
+            new TWConfirmationMenu(player, description + " por $" + TWFormat.formatarDinheiro(price) + "?",
+                    purchase).open();
+        } else {
+            purchase.run();
         }
     }
 

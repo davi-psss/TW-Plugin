@@ -2,7 +2,9 @@ package br.com.tw.spawners.listeners;
 
 import br.com.tw.core.TWCorePlugin;
 import br.com.tw.core.data.TWUser;
+import br.com.tw.core.menus.TWConfirmationMenu;
 import br.com.tw.core.utils.TWFormat;
+import br.com.tw.core.utils.TWItemTags;
 import br.com.tw.economia.TWEconomiaPlugin;
 import br.com.tw.spawners.TWSpawnersPlugin;
 import br.com.tw.spawners.managers.SpawnerManager;
@@ -31,7 +33,10 @@ import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.SpawnerSpawnEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
+import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -66,10 +71,11 @@ public class SpawnerListener implements Listener {
 
             try {
                 long amount = Long.parseLong(event.getMessage());
-                if (amount <= 0) throw new NumberFormatException();
+                if (amount <= 0 || amount > manager.getMaxStackPurchase()) throw new NumberFormatException();
 
                 // Volta para a thread principal para dar os itens e remover saldo com segurança
                 Bukkit.getScheduler().runTask(TWSpawnersPlugin.getInstance(), () -> {
+                    if (!player.isOnline()) return;
                     if (player.getInventory().firstEmpty() == -1) {
                         player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
                         player.sendMessage(ChatColor.RED + "O teu inventário está cheio!");
@@ -78,49 +84,97 @@ public class SpawnerListener implements Listener {
 
                     TWUser user = TWCorePlugin.getInstance().getUserManager().getUser(player.getUniqueId());
                     double totalCost = type.getBuyCost() * amount;
-
-                    if (user != null && user.removeBalance(totalCost)) {
-                        TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
-                        player.getInventory().addItem(manager.createSpawnerItem(type, amount));
-                        player.playSound(player.getLocation(), Sound.LEVEL_UP, 1f, 1.5f);
-                        player.sendMessage(ChatColor.GREEN + "Compraste " + amount + "x " + type.getDisplayName() + ChatColor.GREEN + " por $" + TWFormat.formatarDinheiro(totalCost) + "!");
+                    if (!Double.isFinite(totalCost)) {
+                        player.sendMessage(ChatColor.RED + "O valor total da compra excede o limite permitido.");
+                        return;
+                    }
+                    if (user == null) {
+                        player.sendMessage(ChatColor.RED + "Os teus dados ainda estão a ser carregados.");
+                        return;
+                    }
+                    Runnable purchase = () -> completeSpawnerPurchase(player, user, type, amount, totalCost);
+                    double threshold = TWSpawnersPlugin.getInstance().getConfig()
+                            .getDouble("confirmation.price-threshold", 250000.0);
+                    if (!Double.isFinite(threshold) || threshold < 0.0) {
+                        throw new IllegalStateException("Valor inválido em confirmation.price-threshold.");
+                    }
+                    if (totalCost >= threshold) {
+                        new TWConfirmationMenu(player,
+                                "Comprar " + amount + "x " + type.getDisplayName() + " por $"
+                                        + TWFormat.formatarDinheiro(totalCost) + "?",
+                                purchase).open();
                     } else {
-                        player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
-                        player.sendMessage(ChatColor.RED + "Faltam $" + TWFormat.formatarDinheiro(totalCost - (user != null ? user.getBalance() : 0)) + ".");
+                        purchase.run();
                     }
                 });
 
             } catch (NumberFormatException e) {
-                player.sendMessage("§cQuantidade inválida. Operação cancelada.");
+                player.sendMessage("§cQuantidade inválida. Escolhe um valor entre 1 e "
+                        + manager.getMaxStackPurchase() + ".");
             }
         }
+    }
+
+    private void completeSpawnerPurchase(Player player, TWUser user, SpawnerType type,
+                                         long amount, double totalCost) {
+        if (!player.isOnline()) return;
+        if (player.getInventory().firstEmpty() == -1) {
+            player.sendMessage(ChatColor.RED + "O teu inventário está cheio.");
+            return;
+        }
+        if (user.removeBalance(totalCost)) {
+            TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
+            Map<Integer, ItemStack> leftovers = player.getInventory().addItem(manager.createSpawnerItem(type, amount));
+            for (ItemStack leftover : leftovers.values()) {
+                player.getWorld().dropItemNaturally(player.getLocation(), leftover);
+            }
+            player.playSound(player.getLocation(), Sound.LEVEL_UP, 1f, 1.5f);
+            player.sendMessage(ChatColor.GREEN + "Compraste " + amount + "x " + type.getDisplayName()
+                    + ChatColor.GREEN + " por $" + TWFormat.formatarDinheiro(totalCost) + "!");
+        } else {
+            player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+            player.sendMessage(ChatColor.RED + "Faltam $" + TWFormat.formatarDinheiro(totalCost - user.getBalance()) + ".");
+        }
+    }
+
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        pendingPurchases.remove(event.getPlayer().getUniqueId());
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onPlace(BlockPlaceEvent event) {
         ItemStack hand = event.getItemInHand();
-        if (hand == null || !hand.hasItemMeta() || !hand.getItemMeta().hasLore()) return;
+        if (hand == null) return;
 
-        List<String> lore = hand.getItemMeta().getLore();
-        String lastLine = ChatColor.stripColor(lore.get(lore.size() - 1));
-        if (!lastLine.startsWith("TWSPAWNER:")) return;
+        String typeId;
+        long itemStack;
+        int speedLvl;
+        int lootLvl;
+        int amtLvl;
+        boolean autoSell;
+        if (TWItemTags.has(hand, "tw_spawner_type")) {
+            typeId = TWItemTags.getString(hand, "tw_spawner_type");
+            itemStack = TWItemTags.getLong(hand, "tw_spawner_stack", 0L);
+            speedLvl = TWItemTags.getInt(hand, "tw_spawner_speed", 1);
+            lootLvl = TWItemTags.getInt(hand, "tw_spawner_loot", 1);
+            amtLvl = TWItemTags.getInt(hand, "tw_spawner_amount", 1);
+            autoSell = TWItemTags.getBoolean(hand, "tw_spawner_auto_sell", false);
+        } else {
+            String legacyData = getLegacyData(hand, "TWSPAWNER:");
+            if (legacyData == null) return;
 
-        String[] split = lastLine.split(":");
-        String typeId = split[1];
-        long stackToPlace = Long.parseLong(split[2]) * hand.getAmount();
-
-        // Leitura dos Upgrades Salvos (com compatibilidade para os antigos)
-        int speedLvl = 1;
-        int lootLvl = 1;
-        int amtLvl = 1;
-        boolean autoSell = false;
-
-        if (split.length >= 7) {
-            speedLvl = Integer.parseInt(split[3]);
-            lootLvl = Integer.parseInt(split[4]);
-            amtLvl = Integer.parseInt(split[5]);
-            autoSell = Boolean.parseBoolean(split[6]);
+            String[] split = legacyData.split(":");
+            if (split.length < 3) return;
+            typeId = split[1];
+            itemStack = parseLong(split[2], "stack do spawner");
+            speedLvl = split.length >= 7 ? parseInt(split[3], "velocidade do spawner", 1) : 1;
+            lootLvl = split.length >= 7 ? parseInt(split[4], "fortuna do spawner", 1) : 1;
+            amtLvl = split.length >= 7 ? parseInt(split[5], "quantidade do spawner", 1) : 1;
+            autoSell = split.length >= 7 && Boolean.parseBoolean(split[6]);
         }
+        if (typeId == null || typeId.isEmpty() || itemStack <= 0) return;
+        long stackToPlace = itemStack * hand.getAmount();
 
         SpawnerType type = manager.getSpawnerTypes().get(typeId);
         if (type == null) return;
@@ -182,22 +236,31 @@ public class SpawnerListener implements Listener {
         Player player = event.getPlayer();
         ItemStack hand = player.getItemInHand();
 
-        if (hand != null && hand.hasItemMeta() && hand.getItemMeta().hasLore()) {
-            List<String> lore = hand.getItemMeta().getLore();
-            String lastLine = ChatColor.stripColor(lore.get(lore.size() - 1));
-
-            if (lastLine.startsWith("TWBOOSTER:")) {
+        if (hand != null) {
+            double multiplier;
+            int minutes;
+            if (TWItemTags.has(hand, "tw_spawner_booster")) {
+                multiplier = TWItemTags.getDouble(hand, "tw_booster_multiplier", 0.0);
+                minutes = TWItemTags.getInt(hand, "tw_booster_minutes", 0);
+            } else {
+                String legacyData = getLegacyData(hand, "TWBOOSTER:");
+                if (legacyData == null) {
+                    new SpawnerPanelMenu(player, spawner).open();
+                    return;
+                }
+                String[] parts = legacyData.split(":");
+                if (parts.length < 3) return;
+                multiplier = parseDouble(parts[1], "multiplicador do booster");
+                minutes = parseInt(parts[2], "duração do booster", 0);
+            }
+            if (multiplier > 0.0 && minutes > 0) {
                 if (!spawner.getOwnerUuid().equals(player.getUniqueId()) && !player.hasPermission("tw.admin")) {
                     player.sendMessage(ChatColor.RED + "Apenas o dono pode aplicar boosters!");
                     return;
                 }
 
-                String[] parts = lastLine.split(":");
-                double mult = Double.parseDouble(parts[1]);
-                int mins = Integer.parseInt(parts[2]);
-
-                spawner.setBoosterMultiplier(mult);
-                spawner.setBoosterEndTime((System.currentTimeMillis() / 1000L) + (mins * 60L));
+                spawner.setBoosterMultiplier(multiplier);
+                spawner.setBoosterEndTime((System.currentTimeMillis() / 1000L) + (minutes * 60L));
                 manager.saveSpawnerAsync(spawner);
 
                 SpawnerType type = manager.getSpawnerTypes().get(spawner.getTypeId());
@@ -208,7 +271,7 @@ public class SpawnerListener implements Listener {
 
                 player.updateInventory();
                 player.playSound(player.getLocation(), Sound.LEVEL_UP, 1f, 2.0f);
-                player.sendMessage("§b🔥 Aplicaste um Booster de " + mult + "x por " + mins + " Minutos no spawner!");
+                player.sendMessage("§b🔥 Aplicaste um Booster de " + multiplier + "x por " + minutes + " Minutos no spawner!");
                 return;
             }
         }
@@ -336,14 +399,59 @@ public class SpawnerListener implements Listener {
 
     @EventHandler
     public void onChunkLoad(ChunkLoadEvent event) {
-        for (PlacedSpawner s : manager.getPlacedSpawners().values()) {
-            Location loc = s.getBukkitLocation();
-            if (loc != null && loc.getWorld().equals(event.getWorld())) {
-                if ((loc.getBlockX() >> 4) == event.getChunk().getX() && (loc.getBlockZ() >> 4) == event.getChunk().getZ()) {
-                    SpawnerType type = manager.getSpawnerTypes().get(s.getTypeId());
-                    if (type != null) TWSpawnersPlugin.getInstance().getHologramManager().updateOrCreateHologram(s, type);
-                }
-            }
+        TWSpawnersPlugin.getInstance().getHologramManager().refreshInChunk(
+                event.getChunk(), manager.getPlacedSpawners().values(), manager.getSpawnerTypes());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onChunkUnload(ChunkUnloadEvent event) {
+        TWSpawnersPlugin.getInstance().getHologramManager().onChunkUnload(event.getChunk());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onWorldChange(PlayerTeleportEvent event) {
+        if (event.getTo() != null && !event.getFrom().getWorld().equals(event.getTo().getWorld())) {
+            TWSpawnersPlugin.getInstance().getHologramManager()
+                    .destroyForPlayer(event.getPlayer(), event.getFrom().getWorld());
+        }
+    }
+
+    private String getLegacyData(ItemStack item, String prefix) {
+        if (!item.hasItemMeta() || !item.getItemMeta().hasLore()) return null;
+        List<String> lore = item.getItemMeta().getLore();
+        if (lore.isEmpty()) return null;
+
+        String lastLine = ChatColor.stripColor(lore.get(lore.size() - 1));
+        return lastLine.startsWith(prefix) ? lastLine : null;
+    }
+
+    private long parseLong(String value, String field) {
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException e) {
+            TWSpawnersPlugin.getInstance().getLogger()
+                    .warning("Dados antigos inválidos no item (" + field + "): " + value);
+            return 0L;
+        }
+    }
+
+    private int parseInt(String value, String field, int fallback) {
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            TWSpawnersPlugin.getInstance().getLogger()
+                    .warning("Dados antigos inválidos no item (" + field + "): " + value);
+            return fallback;
+        }
+    }
+
+    private double parseDouble(String value, String field) {
+        try {
+            return Double.parseDouble(value);
+        } catch (NumberFormatException e) {
+            TWSpawnersPlugin.getInstance().getLogger()
+                    .warning("Dados antigos inválidos no item (" + field + "): " + value);
+            return 0.0;
         }
     }
 }

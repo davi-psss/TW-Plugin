@@ -1,6 +1,38 @@
-mysql:
+postgresql:
   host: "localhost"
-  port: 3306
-  database: "coretech_db"
-  username: "root"
-  password: "1234"
+  port: 5432
+  database: "tw_network_db"
+  # Prefer the TW_DB_USERNAME and TW_DB_PASSWORD environment variables on production servers.
+  username: ""
+  password: ""
+
+worlds:
+  mines: "minas"
+  plots: "terrenos"
+  plots-aliases:
+    - "plots"
+
+scoreboard:
+  update-ticks: 20
+
+progression:
+  rank-order:
+    - "CARVAO"
+    - "NEVE"
+    - "SINO"
+    - "BISCOITO"
+    - "DUENDE"
+    - "RENA"
+    - "TRENO"
+    - "QUEBRANOZES"
+    - "ESTRELA"
+    - "NOEL"
+    - "MAX"
+  prestige-order:
+    - "GRINCH"
+    - "YETI"
+    - "KRAMPUS"
+  prestige-multipliers:
+    GRINCH: 1.5
+    YETI: 2.0
+    KRAMPUS: 3.0

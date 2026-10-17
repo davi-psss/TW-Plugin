@@ -3,7 +3,6 @@ package br.com.tw.ranks.commands;
 import br.com.tw.core.TWCorePlugin;
 import br.com.tw.core.data.TWUser;
 import br.com.tw.ranks.TWRanksPlugin;
-import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Sound;
@@ -26,12 +25,15 @@ public class RankupMaxCommand implements CommandExecutor {
         Player player = (Player) sender;
         TWUser user = TWCorePlugin.getInstance().getUserManager().getUser(player.getUniqueId());
 
-        if (user == null || user.getRankId().equalsIgnoreCase("MAX")) {
+        if (user == null) {
+            player.sendMessage(ChatColor.RED + "Os teus dados ainda estão a ser carregados.");
+            return true;
+        }
+        if ("MAX".equalsIgnoreCase(user.getRankId())) {
             player.sendMessage(ChatColor.AQUA + "Já atingiste o Rank Máximo!");
             return true;
         }
 
-        Economy econ = Bukkit.getServer().getServicesManager().getRegistration(Economy.class).getProvider();
         int ranksEvoluidos = 0;
         String novoRank = user.getRankId();
 
@@ -40,8 +42,7 @@ public class RankupMaxCommand implements CommandExecutor {
             if (nextRank == null || nextRank.equalsIgnoreCase("MAX")) break;
 
             double cost = plugin.getRanksConfig().getDouble("ranks." + novoRank + ".cost");
-            if (econ.getBalance(player) >= cost) {
-                if (econ.withdrawPlayer(player, cost).transactionSuccess()) {
+            if (user.removeBalance(cost)) {
                     novoRank = nextRank;
                     ranksEvoluidos++;
 
@@ -50,9 +51,6 @@ public class RankupMaxCommand implements CommandExecutor {
                     for (String cmd : cmds) {
                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd.replace("%player%", player.getName()));
                     }
-                } else {
-                    break;
-                }
             } else {
                 break;
             }

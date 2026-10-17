@@ -7,6 +7,7 @@ import java.sql.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.logging.Level;
 
 public class SpawnerRepository {
 
@@ -30,23 +31,26 @@ public class SpawnerRepository {
                 "amount_level INT DEFAULT 1, " +
                 "virtual_mode BOOLEAN DEFAULT FALSE, " +
                 "auto_sell BOOLEAN DEFAULT FALSE, " +
-                "stored_money DOUBLE DEFAULT 0.0, " +
+                "stored_money DOUBLE PRECISION DEFAULT 0.0, " +
                 "stored_tokens BIGINT DEFAULT 0, " +
                 "stored_xp BIGINT DEFAULT 0, " +
                 "stored_souls BIGINT DEFAULT 0, " +
                 "total_kills BIGINT DEFAULT 0, " +
-                "booster_mult DOUBLE DEFAULT 1.0, " +
+                "booster_mult DOUBLE PRECISION DEFAULT 1.0, " +
                 "booster_end BIGINT DEFAULT 0" +
                 ")";
 
         try (Connection conn = db.getConnection(); Statement stmt = conn.createStatement()) {
             stmt.execute(query);
-            try { stmt.execute("ALTER TABLE tw_spawners ADD COLUMN auto_sell BOOLEAN DEFAULT FALSE"); } catch (SQLException ignored) {}
-            try { stmt.execute("ALTER TABLE tw_spawners ADD COLUMN stored_xp BIGINT DEFAULT 0"); } catch (SQLException ignored) {}
-            try { stmt.execute("ALTER TABLE tw_spawners ADD COLUMN stored_souls BIGINT DEFAULT 0"); } catch (SQLException ignored) {}
-            try { stmt.execute("ALTER TABLE tw_spawners ADD COLUMN booster_mult DOUBLE DEFAULT 1.0"); } catch (SQLException ignored) {}
-            try { stmt.execute("ALTER TABLE tw_spawners ADD COLUMN booster_end BIGINT DEFAULT 0"); } catch (SQLException ignored) {}
-        } catch (SQLException e) { e.printStackTrace(); }
+            stmt.execute("ALTER TABLE tw_spawners ADD COLUMN IF NOT EXISTS auto_sell BOOLEAN DEFAULT FALSE");
+            stmt.execute("ALTER TABLE tw_spawners ADD COLUMN IF NOT EXISTS stored_xp BIGINT DEFAULT 0");
+            stmt.execute("ALTER TABLE tw_spawners ADD COLUMN IF NOT EXISTS stored_souls BIGINT DEFAULT 0");
+            stmt.execute("ALTER TABLE tw_spawners ADD COLUMN IF NOT EXISTS booster_mult DOUBLE PRECISION DEFAULT 1.0");
+            stmt.execute("ALTER TABLE tw_spawners ADD COLUMN IF NOT EXISTS booster_end BIGINT DEFAULT 0");
+        } catch (SQLException e) {
+            throw failure("Falha ao criar ou atualizar a tabela de spawners.", e);
+        }
+        db.recordSchemaVersion("tw_spawners", 2);
     }
 
     public Map<String, PlacedSpawner> loadAllSpawners() {
@@ -65,17 +69,20 @@ public class SpawnerRepository {
                 );
                 map.put(spawner.getLocationKey(), spawner);
             }
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            throw failure("Falha ao carregar os spawners.", e);
+        }
         return map;
     }
 
     public void saveSpawner(PlacedSpawner s) {
         String query = "INSERT INTO tw_spawners (loc_key, owner_uuid, owner_name, type_id, stack_amount, last_spawn_time, speed_level, loot_level, amount_level, virtual_mode, auto_sell, stored_money, stored_tokens, stored_xp, stored_souls, total_kills, booster_mult, booster_end) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
-                "ON DUPLICATE KEY UPDATE stack_amount=VALUES(stack_amount), last_spawn_time=VALUES(last_spawn_time), speed_level=VALUES(speed_level), " +
-                "loot_level=VALUES(loot_level), amount_level=VALUES(amount_level), virtual_mode=VALUES(virtual_mode), auto_sell=VALUES(auto_sell), " +
-                "stored_money=VALUES(stored_money), stored_tokens=VALUES(stored_tokens), stored_xp=VALUES(stored_xp), stored_souls=VALUES(stored_souls), " +
-                "total_kills=VALUES(total_kills), booster_mult=VALUES(booster_mult), booster_end=VALUES(booster_end)";
+                "ON CONFLICT (loc_key) DO UPDATE SET stack_amount = EXCLUDED.stack_amount, last_spawn_time = EXCLUDED.last_spawn_time, " +
+                "speed_level = EXCLUDED.speed_level, loot_level = EXCLUDED.loot_level, amount_level = EXCLUDED.amount_level, " +
+                "virtual_mode = EXCLUDED.virtual_mode, auto_sell = EXCLUDED.auto_sell, stored_money = EXCLUDED.stored_money, " +
+                "stored_tokens = EXCLUDED.stored_tokens, stored_xp = EXCLUDED.stored_xp, stored_souls = EXCLUDED.stored_souls, " +
+                "total_kills = EXCLUDED.total_kills, booster_mult = EXCLUDED.booster_mult, booster_end = EXCLUDED.booster_end";
 
         try (Connection conn = db.getConnection(); PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, s.getLocationKey()); ps.setString(2, s.getOwnerUuid().toString()); ps.setString(3, s.getOwnerName());
@@ -85,12 +92,21 @@ public class SpawnerRepository {
             ps.setLong(13, s.getStoredTokens()); ps.setLong(14, s.getStoredXp()); ps.setLong(15, s.getStoredSouls());
             ps.setLong(16, s.getTotalKills()); ps.setDouble(17, s.getBoosterMultiplier()); ps.setLong(18, s.getBoosterEndTime());
             ps.executeUpdate();
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            throw failure("Falha ao salvar spawner em " + s.getLocationKey() + ".", e);
+        }
     }
 
     public void deleteSpawner(String locKey) {
         try (Connection conn = db.getConnection(); PreparedStatement ps = conn.prepareStatement("DELETE FROM tw_spawners WHERE loc_key = ?")) {
             ps.setString(1, locKey); ps.executeUpdate();
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            throw failure("Falha ao remover spawner em " + locKey + ".", e);
+        }
+    }
+
+    private IllegalStateException failure(String message, SQLException cause) {
+        db.getLogger().log(Level.SEVERE, message, cause);
+        return new IllegalStateException(message, cause);
     }
 }

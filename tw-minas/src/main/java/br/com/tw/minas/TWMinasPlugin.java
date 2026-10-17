@@ -15,6 +15,7 @@ public class TWMinasPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
+        saveDefaultConfig();
 
         this.cartinhasManager = new CartinhasManager();
         this.mineEventManager = new MineEventManager(this);

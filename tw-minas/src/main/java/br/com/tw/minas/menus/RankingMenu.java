@@ -2,6 +2,7 @@ package br.com.tw.minas.menus;
 
 import br.com.tw.core.TWCorePlugin;
 import br.com.tw.core.menus.TWMenu;
+import br.com.tw.core.utils.TWMenuFrame;
 import br.com.tw.minas.TWMinasPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -37,27 +38,37 @@ public class RankingMenu implements TWMenu {
         inventory.setItem(13, createLoadingSkull("§f§l2º Lugar"));
         inventory.setItem(15, createLoadingSkull("§6§l3º Lugar"));
         inventory.setItem(31, createItem(Material.WOOD_DOOR, "§cVoltar", "§7Retornar à Central."));
+        TWMenuFrame.apply(inventory);
     }
 
     private void loadRankingAsync() {
         Bukkit.getScheduler().runTaskAsynchronously(TWMinasPlugin.getInstance(), () -> {
-            Map<String, Long> topMiners = TWCorePlugin.getInstance().getUserManager().getTopMiners(3);
+            try {
+                Map<String, Long> topMiners = TWCorePlugin.getInstance().getUserManager().getTopMiners(3);
+                Bukkit.getScheduler().runTask(TWMinasPlugin.getInstance(), () -> {
+                    if (!player.isOnline()) return;
+                    int[] slots = {11, 13, 15};
+                    String[] titulos = {"§e§l1º O Rei da Mina", "§f§l2º Prata", "§6§l3º Bronze"};
 
-            // Volta para a thread principal para atualizar o inventário
-            Bukkit.getScheduler().runTask(TWMinasPlugin.getInstance(), () -> {
-                int[] slots = {11, 13, 15};
-                String[] titulos = {"§e§l1º O Rei da Mina", "§f§l2º Prata", "§6§l3º Bronze"};
-
-                int i = 0;
-                for (Map.Entry<String, Long> entry : topMiners.entrySet()) {
-                    if (i >= 3) break;
-                    String nome = entry.getKey();
-                    long blocos = entry.getValue();
-
-                    inventory.setItem(slots[i], getPlayerSkull(nome, titulos[i], "§7Blocos Quebrados: §b" + String.format("%,d", blocos)));
-                    i++;
-                }
-            });
+                    int i = 0;
+                    for (Map.Entry<String, Long> entry : topMiners.entrySet()) {
+                        if (i >= 3) break;
+                        String nome = entry.getKey();
+                        long blocos = entry.getValue();
+                        inventory.setItem(slots[i], getPlayerSkull(nome, titulos[i],
+                                "§7Blocos Quebrados: §b" + String.format("%,d", blocos)));
+                        i++;
+                    }
+                });
+            } catch (IllegalStateException e) {
+                TWMinasPlugin.getInstance().getLogger().log(java.util.logging.Level.SEVERE,
+                        "Falha ao consultar o ranking de mineradores.", e);
+                Bukkit.getScheduler().runTask(TWMinasPlugin.getInstance(), () -> {
+                    if (player.isOnline()) {
+                        player.sendMessage(ChatColor.RED + "Não foi possível carregar o ranking agora.");
+                    }
+                });
+            }
         });
     }
 

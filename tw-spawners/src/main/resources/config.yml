@@ -41,3 +41,11 @@ spawners:
     custo-compra: 1500000000000.0
     valor-por-kill: 12000000000.0
     chance-token: 0.50
+
+limits:
+  max-spawn-per-cycle: 1000
+  max-entities-per-spawner: 32
+  max-stack-purchase: 1000
+
+confirmation:
+  price-threshold: 250000.0

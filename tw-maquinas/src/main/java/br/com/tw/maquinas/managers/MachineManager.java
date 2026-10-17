@@ -1,7 +1,9 @@
 package br.com.tw.maquinas.managers;
 
-import br.com.tw.core.TWCorePlugin;
 import br.com.tw.core.utils.TWFormat;
+import br.com.tw.core.utils.TWItemTags;
+import br.com.tw.core.utils.TWAsyncTaskQueue;
+import br.com.tw.core.utils.TWConfigValidation;
 import br.com.tw.maquinas.TWMaquinasPlugin;
 import br.com.tw.maquinas.data.MachineRepository;
 import br.com.tw.maquinas.models.MachineType;
@@ -24,17 +26,19 @@ public class MachineManager {
 
     private final TWMaquinasPlugin plugin;
     private final MachineRepository repository;
+    private final TWAsyncTaskQueue saveQueue;
 
     private final Map<String, MachineType> machineTypes = new LinkedHashMap<>();
     private final Map<String, PlacedMachine> placedMachines = new ConcurrentHashMap<>();
+    private final Set<String> loggedProcessingFailures = ConcurrentHashMap.newKeySet();
 
-    private final List<String> rankHierarchy = Arrays.asList(
-            "CARVAO", "NEVE", "SINO", "BISCOITO", "DUENDE", "RENA", "TRENO", "QUEBRANOZES", "ESTRELA", "NOEL", "MAX"
-    );
+    private final List<String> rankHierarchy;
 
     public MachineManager(TWMaquinasPlugin plugin, MachineRepository repository) {
         this.plugin = plugin;
         this.repository = repository;
+        this.saveQueue = new TWAsyncTaskQueue(plugin, "tw-machines-db");
+        this.rankHierarchy = br.com.tw.core.TWCorePlugin.getInstance().getRankHierarchy();
 
         loadConfigTypes();
         this.placedMachines.putAll(repository.loadAllMachines());
@@ -54,17 +58,29 @@ public class MachineManager {
     public void loadConfigTypes() {
         machineTypes.clear();
         ConfigurationSection sec = plugin.getConfig().getConfigurationSection("maquinas");
-        if (sec == null) return;
+        if (sec == null || sec.getKeys(false).isEmpty()) {
+            throw new IllegalArgumentException("Configuração inválida em maquinas: é necessário definir ao menos um tipo.");
+        }
 
         for (String key : sec.getKeys(false)) {
-            String name = sec.getString(key + ".nome", "&aMáquina");
+            String name = TWConfigValidation.requireText(plugin, "maquinas." + key + ".nome",
+                    sec.getString(key + ".nome"));
             Material mat = Material.matchMaterial(sec.getString(key + ".material", "COAL_BLOCK"));
-            if (mat == null) mat = Material.COAL_BLOCK;
+            if (mat == null || mat == Material.AIR) {
+                throw new IllegalArgumentException("Material inválido em maquinas." + key + ".material.");
+            }
 
-            String reqRank = sec.getString(key + ".rank-necessario", "CARVAO");
-            double cost = sec.getDouble(key + ".custo-compra", 10000.0);
-            double val = sec.getDouble(key + ".valor-por-ciclo", 500.0);
-            int cycle = sec.getInt(key + ".ciclo-segundos", 10);
+            String reqRank = TWConfigValidation.requireText(plugin, "maquinas." + key + ".rank-necessario",
+                    sec.getString(key + ".rank-necessario"));
+            if (!rankHierarchy.contains(reqRank.toUpperCase(Locale.ROOT))) {
+                throw new IllegalArgumentException("Rank desconhecido em maquinas." + key + ".rank-necessario: " + reqRank);
+            }
+            double cost = TWConfigValidation.requireFiniteAtLeast(plugin, "maquinas." + key + ".custo-compra",
+                    sec.getDouble(key + ".custo-compra", Double.NaN), 0.0);
+            double val = TWConfigValidation.requireFiniteAtLeast(plugin, "maquinas." + key + ".valor-por-ciclo",
+                    sec.getDouble(key + ".valor-por-ciclo", Double.NaN), 0.0);
+            int cycle = TWConfigValidation.requireIntRange(plugin, "maquinas." + key + ".ciclo-segundos",
+                    sec.getInt(key + ".ciclo-segundos", -1), 1, 86400);
 
             machineTypes.put(key.toUpperCase(), new MachineType(key, name, mat, reqRank, cost, val, cycle));
         }
@@ -77,40 +93,14 @@ public class MachineManager {
                 long nowSec = System.currentTimeMillis() / 1000L;
 
                 for (PlacedMachine machine : placedMachines.values()) {
-                    MachineType type = machineTypes.get(machine.getTypeId());
-                    if (type == null) continue;
-
-                    Location loc = machine.getBukkitLocation();
-                    if (loc == null || !loc.getWorld().isChunkLoaded(loc.getBlockX() >> 4, loc.getBlockZ() >> 4)) {
-                        continue;
-                    }
-
-                    if (machine.getFuel() <= 0) {
-                        plugin.getHologramManager().updateOrCreateHologram(machine, type);
-                        continue;
-                    }
-
-                    double realCycleSeconds = Math.max(1.0, type.getCycleSeconds() - ((machine.getSpeedLevel() - 1) * 0.5));
-
-                    if (nowSec - machine.getLastTickEpochSeconds() >= realCycleSeconds) {
-                        machine.setLastTickEpochSeconds(nowSec);
-
-                        double fuelSaveChance = (machine.getFuelEfficiencyLevel() - 1) * 0.05;
-                        boolean consumeFuel = Math.random() >= fuelSaveChance;
-
-                        if (!consumeFuel || machine.consumeFuel(1)) {
-                            double maxStorage = (type.getValuePerCycle() * machine.getStackAmount()) * (10 * machine.getStorageLevel());
-                            if (machine.getStoredEarnings() < maxStorage) {
-                                double generated = type.getValuePerCycle() * machine.getStackAmount();
-                                machine.addStoredEarnings(generated);
-                                machine.addTotalGenerated(generated);
-                                playMachineEffects(loc, type.getId());
-                            }
+                    try {
+                        processMachine(machine, nowSec);
+                    } catch (RuntimeException e) {
+                        if (loggedProcessingFailures.add(machine.getLocationKey())) {
+                            plugin.getLogger().log(java.util.logging.Level.SEVERE,
+                                    "Falha ao processar máquina em " + machine.getLocationKey() + ".", e);
                         }
                     }
-
-                    // Fora do if do ciclo, para animar a barra a cada segundo
-                    plugin.getHologramManager().updateOrCreateHologram(machine, type);
                 }
             }
         }.runTaskTimer(plugin, 20L, 20L);
@@ -118,9 +108,42 @@ public class MachineManager {
         new BukkitRunnable() {
             @Override
             public void run() {
-                saveAllSync();
+                saveAllAsync();
             }
-        }.runTaskTimerAsynchronously(plugin, 72000L, 72000L);
+        }.runTaskTimer(plugin, 72000L, 72000L);
+    }
+
+    private void processMachine(PlacedMachine machine, long nowSec) {
+        MachineType type = machineTypes.get(machine.getTypeId());
+        if (type == null) return;
+
+        Location loc = machine.getBukkitLocation();
+        if (loc == null || !loc.getWorld().isChunkLoaded(loc.getBlockX() >> 4, loc.getBlockZ() >> 4)) return;
+
+        if (machine.getFuel() > 0) {
+            double realCycleSeconds = Math.max(1.0,
+                    type.getCycleSeconds() - ((machine.getSpeedLevel() - 1) * 0.5));
+            if (nowSec - machine.getLastTickEpochSeconds() >= realCycleSeconds) {
+                machine.setLastTickEpochSeconds(nowSec);
+                double fuelSaveChance = Math.min(1.0, Math.max(0.0,
+                        (machine.getFuelEfficiencyLevel() - 1) * 0.05));
+                boolean consumeFuel = Math.random() >= fuelSaveChance;
+
+                if (!consumeFuel || machine.consumeFuel(1)) {
+                    double generated = type.getValuePerCycle() * machine.getStackAmount();
+                    double maxStorage = generated * (10 * machine.getStorageLevel());
+                    if (!Double.isFinite(generated) || !Double.isFinite(maxStorage)) {
+                        throw new IllegalStateException("Produção excedeu o limite numérico.");
+                    }
+                    if (machine.getStoredEarnings() < maxStorage) {
+                        machine.addStoredEarnings(generated);
+                        machine.addTotalGenerated(generated);
+                        playMachineEffects(loc, type.getId());
+                    }
+                }
+            }
+        }
+        plugin.getHologramManager().updateOrCreateHologram(machine, type);
     }
 
     private void playMachineEffects(Location loc, String typeId) {
@@ -167,7 +190,10 @@ public class MachineManager {
                 ChatColor.BLACK + "TWMACHINE:" + type.getId() + ":" + amount
         ));
         item.setItemMeta(meta);
-        return item;
+        Map<String, Object> tags = new HashMap<>();
+        tags.put("tw_machine_type", type.getId());
+        tags.put("tw_machine_stack", amount);
+        return TWItemTags.set(item, tags);
     }
 
     public ItemStack createFuelItem(long fuelUnits) {
@@ -183,7 +209,9 @@ public class MachineManager {
                 ChatColor.BLACK + "TWFUEL:" + fuelUnits
         ));
         item.setItemMeta(meta);
-        return item;
+        Map<String, Object> tags = new HashMap<>();
+        tags.put("tw_fuel_units", fuelUnits);
+        return TWItemTags.set(item, tags);
     }
 
     public PlacedMachine getMachineAt(Location loc) {
@@ -213,16 +241,29 @@ public class MachineManager {
     public void removeMachine(Location loc) {
         String key = PlacedMachine.toKey(loc);
         placedMachines.remove(key);
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> repository.deleteMachine(key));
+        saveQueue.submit("Falha ao remover máquina " + key + " do banco.", () -> repository.deleteMachine(key));
     }
 
     public void saveMachineAsync(PlacedMachine machine) {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> repository.saveMachine(machine));
+        PlacedMachine snapshot = machine.snapshot();
+        saveQueue.submit("Falha ao salvar máquina " + snapshot.getLocationKey() + " no banco.",
+                () -> repository.saveMachine(snapshot));
     }
 
     public void saveAllSync() {
         for (PlacedMachine m : placedMachines.values()) {
-            repository.saveMachine(m);
+            PlacedMachine snapshot = m.snapshot();
+            saveQueue.submit("Falha ao salvar máquina " + snapshot.getLocationKey() + " no banco.",
+                    () -> repository.saveMachine(snapshot));
+        }
+        saveQueue.shutdownAndAwait();
+    }
+
+    private void saveAllAsync() {
+        for (PlacedMachine machine : placedMachines.values()) {
+            PlacedMachine snapshot = machine.snapshot();
+            saveQueue.submit("Falha ao salvar máquina " + snapshot.getLocationKey() + " no banco.",
+                    () -> repository.saveMachine(snapshot));
         }
     }
 

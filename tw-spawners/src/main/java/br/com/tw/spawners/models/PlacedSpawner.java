@@ -116,4 +116,10 @@ public class PlacedSpawner {
     public long getBoosterEndTime() { return boosterEndTime; }
     public void setBoosterEndTime(long boosterEndTime) { this.boosterEndTime = boosterEndTime; }
     public boolean hasActiveBooster() { return (System.currentTimeMillis() / 1000L) < boosterEndTime; }
+
+    public PlacedSpawner snapshot() {
+        return new PlacedSpawner(locationKey, ownerUuid, ownerName, typeId, stackAmount, lastSpawnTime,
+                speedLevel, lootLevel, amountLevel, virtualMode, autoSell, storedMoney, storedTokens,
+                storedXp, storedSouls, totalKills, boosterMultiplier, boosterEndTime);
+    }
 }

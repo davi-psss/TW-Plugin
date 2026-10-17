@@ -3,6 +3,7 @@ package br.com.tw.minas.managers;
 import br.com.tw.core.TWCorePlugin;
 import br.com.tw.core.data.TWUser;
 import br.com.tw.core.utils.TWFormat;
+import br.com.tw.minas.TWMinasPlugin;
 import org.bukkit.ChatColor;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -75,7 +76,9 @@ public class CartinhasManager {
                         list.add(new MissionSlot(i, type, prog, targ, rTokens, rMoney));
                     }
                     return list;
-                } catch (Exception ignored) {
+                } catch (IllegalArgumentException | IndexOutOfBoundsException e) {
+                    TWMinasPlugin.getInstance().getLogger().warning(
+                            "Dados de missões inválidos para " + user.getUuid() + "; novas missões serão geradas.");
                     list.clear();
                 }
             }

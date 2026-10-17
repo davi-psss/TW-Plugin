@@ -3,7 +3,6 @@ package br.com.tw.ranks.commands;
 import br.com.tw.core.TWCorePlugin;
 import br.com.tw.core.data.TWUser;
 import br.com.tw.ranks.TWRanksPlugin;
-import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Sound;
@@ -11,23 +10,18 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
-import java.io.File;
-import java.util.Arrays;
 import java.util.List;
 
 public class PrestigioCommand implements CommandExecutor {
-    private final TWRanksPlugin plugin;
     private final FileConfiguration ranksConfig;
     // Ordem baseada nos dados padrão do seu banco e do ranks.yml
-    private final List<String> prestigeOrder = Arrays.asList("NENHUM", "GRINCH", "YETI", "KRAMPUS");
+    private final List<String> prestigeOrder;
 
     public PrestigioCommand(TWRanksPlugin plugin) {
-        this.plugin = plugin;
-        File file = new File(plugin.getDataFolder(), "ranks.yml");
-        this.ranksConfig = YamlConfiguration.loadConfiguration(file);
+        this.ranksConfig = plugin.getRanksConfig();
+        this.prestigeOrder = TWCorePlugin.getInstance().getPrestigeHierarchy();
     }
 
     @Override
@@ -48,9 +42,15 @@ public class PrestigioCommand implements CommandExecutor {
         }
 
         String currentPrestige = user.getPrestigeId();
-        int currentIndex = prestigeOrder.indexOf(currentPrestige.toUpperCase());
+        int currentIndex = -1;
+        for (int i = 0; i < prestigeOrder.size(); i++) {
+            if (prestigeOrder.get(i).equalsIgnoreCase(currentPrestige)) {
+                currentIndex = i;
+                break;
+            }
+        }
 
-        if (currentIndex == -1 || currentIndex >= prestigeOrder.size() - 1) {
+        if (currentIndex >= prestigeOrder.size() - 1) {
             player.sendMessage(ChatColor.AQUA + "Já atingiste o Prestígio Máximo do servidor!");
             return true;
         }
@@ -58,11 +58,10 @@ public class PrestigioCommand implements CommandExecutor {
         String nextPrestige = prestigeOrder.get(currentIndex + 1);
         double cost = ranksConfig.getDouble("prestiges." + nextPrestige + ".cost");
 
-        Economy econ = Bukkit.getServer().getServicesManager().getRegistration(Economy.class).getProvider();
-        double balance = econ.getBalance(player);
+        double balance = user.getBalance();
 
         if (balance >= cost) {
-            if (econ.withdrawPlayer(player, cost).transactionSuccess()) {
+            if (user.removeBalance(cost)) {
                 // Atualiza o prestígio e reseta o rank
                 user.setPrestigeId(nextPrestige);
                 user.setRankId("CARVAO");

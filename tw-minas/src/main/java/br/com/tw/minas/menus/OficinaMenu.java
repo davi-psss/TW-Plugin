@@ -3,6 +3,7 @@ package br.com.tw.minas.menus;
 import br.com.tw.core.TWCorePlugin;
 import br.com.tw.core.data.TWUser;
 import br.com.tw.core.menus.TWMenu;
+import br.com.tw.core.utils.TWMenuFrame;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -47,6 +48,7 @@ public class OficinaMenu implements TWMenu {
 
     private void setupItems() {
         inventory.clear();
+        TWMenuFrame.apply(inventory);
         if (user == null) return;
 
         // Lendo diretamente do TWUser

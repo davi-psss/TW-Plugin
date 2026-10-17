@@ -13,15 +13,12 @@ public class TWUser {
     private long blocosQuebrados;
     private double dinheiroMina;
     private double balance;
-
-    // CAMPOS DA PICARETA
     private int pickaxeLevel;
     private double pickaxeXp;
     private final Map<String, Integer> pickaxeSkills;
-
-    // NOVO: SISTEMA DE CARTINHAS (MISSÕES ALEATÓRIAS) E DIRTY CHECKING
     private String missoesData;
     private transient boolean dirty = false;
+    private transient long version = 0L;
 
     public TWUser(UUID uuid, String name, long tokens, String rankId, String prestigeId) {
         this.uuid = uuid;
@@ -36,80 +33,137 @@ public class TWUser {
         this.missoesData = "";
     }
 
-    public boolean isDirty() { return dirty; }
-    public void setDirty(boolean dirty) { this.dirty = dirty; }
-
-    public UUID getUuid() { return uuid; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; this.dirty = true; }
-
-    public long getTokens() { return tokens; }
-    public void setTokens(long tokens) { this.tokens = tokens; this.dirty = true; }
-    public void addTokens(long amount) { this.tokens += amount; this.dirty = true; }
-    public boolean removeTokens(long amount) {
-        if (this.tokens >= amount) {
-            this.tokens -= amount;
-            this.dirty = true;
-            return true;
-        }
-        return false;
+    public synchronized boolean isDirty() { return dirty; }
+    public synchronized void setDirty(boolean dirty) {
+        if (dirty) markChanged();
+        else this.dirty = false;
     }
 
-    public String getRankId() { return rankId; }
-    public void setRankId(String rankId) { this.rankId = rankId; this.dirty = true; }
-    public String getPrestigeId() { return prestigeId; }
-    public void setPrestigeId(String prestigeId) { this.prestigeId = prestigeId; this.dirty = true; }
+    public synchronized UUID getUuid() { return uuid; }
+    public synchronized String getName() { return name; }
+    public synchronized void setName(String name) { this.name = name; markChanged(); }
 
-    public long getBlocosQuebrados() { return blocosQuebrados; }
-    public void setBlocosQuebrados(long blocosQuebrados) { this.blocosQuebrados = blocosQuebrados; }
-    public void addBlocosQuebrados(long quantidade) { this.blocosQuebrados += quantidade; this.dirty = true; }
-
-    public double getDinheiroMina() { return dinheiroMina; }
-    public void setDinheiroMina(double dinheiroMina) { this.dinheiroMina = dinheiroMina; }
-    public void addDinheiroMina(double quantidade) { this.dinheiroMina += quantidade; this.dirty = true; }
-
-    public double getBalance() { return balance; }
-    public void setBalance(double balance) { this.balance = balance; this.dirty = true; }
-    public void addBalance(double amount) { this.balance += amount; this.dirty = true; }
-    public boolean removeBalance(double amount) {
-        if (this.balance >= amount) {
-            this.balance -= amount;
-            this.dirty = true;
-            return true;
-        }
-        return false;
+    public synchronized long getTokens() { return tokens; }
+    public synchronized void setTokens(long tokens) {
+        if (tokens < 0) throw new IllegalArgumentException("Tokens não podem ser negativos.");
+        this.tokens = tokens;
+        markChanged();
+    }
+    public synchronized void addTokens(long amount) {
+        requireNonNegative(amount, "tokens");
+        this.tokens = Math.addExact(this.tokens, amount);
+        markChanged();
+    }
+    public synchronized boolean removeTokens(long amount) {
+        if (amount < 0) throw new IllegalArgumentException("A quantidade de tokens não pode ser negativa.");
+        if (this.tokens < amount) return false;
+        this.tokens -= amount;
+        markChanged();
+        return true;
     }
 
-    public int getPickaxeLevel() { return pickaxeLevel; }
-    public void setPickaxeLevel(int pickaxeLevel) { this.pickaxeLevel = pickaxeLevel; }
-    public double getPickaxeXp() { return pickaxeXp; }
-    public void setPickaxeXp(double pickaxeXp) { this.pickaxeXp = pickaxeXp; }
+    public synchronized String getRankId() { return rankId; }
+    public synchronized void setRankId(String rankId) { this.rankId = rankId; markChanged(); }
+    public synchronized String getPrestigeId() { return prestigeId; }
+    public synchronized void setPrestigeId(String prestigeId) { this.prestigeId = prestigeId; markChanged(); }
 
-    public boolean addPickaxeXp(double amount) {
+    public synchronized long getBlocosQuebrados() { return blocosQuebrados; }
+    public synchronized void setBlocosQuebrados(long blocosQuebrados) {
+        requireNonNegative(blocosQuebrados, "blocos quebrados");
+        this.blocosQuebrados = blocosQuebrados;
+        markChanged();
+    }
+    public synchronized void addBlocosQuebrados(long quantidade) {
+        requireNonNegative(quantidade, "blocos quebrados");
+        this.blocosQuebrados = Math.addExact(this.blocosQuebrados, quantidade);
+        markChanged();
+    }
+
+    public synchronized double getDinheiroMina() { return dinheiroMina; }
+    public synchronized void setDinheiroMina(double dinheiroMina) {
+        requireNonNegative(dinheiroMina, "dinheiro da mina");
+        this.dinheiroMina = dinheiroMina;
+        markChanged();
+    }
+    public synchronized void addDinheiroMina(double quantidade) {
+        requireNonNegative(quantidade, "dinheiro da mina");
+        this.dinheiroMina = requireFinite(this.dinheiroMina + quantidade, "dinheiro da mina");
+        markChanged();
+    }
+
+    public synchronized double getBalance() { return balance; }
+    public synchronized void setBalance(double balance) {
+        this.balance = requireNonNegative(balance, "saldo");
+        markChanged();
+    }
+    public synchronized void addBalance(double amount) {
+        requireNonNegative(amount, "saldo");
+        this.balance = requireFinite(this.balance + amount, "saldo");
+        markChanged();
+    }
+    public synchronized boolean removeBalance(double amount) {
+        requireNonNegative(amount, "saldo");
+        if (this.balance < amount) return false;
+        this.balance -= amount;
+        markChanged();
+        return true;
+    }
+
+    public boolean transferBalanceTo(TWUser target, double amount) {
+        requireNonNegative(amount, "transferência");
+        if (target == null || target == this || amount == 0.0) return false;
+        synchronized (TWUser.class) {
+            synchronized (this) {
+                synchronized (target) {
+                    if (balance < amount || !Double.isFinite(target.balance + amount)) return false;
+                    balance -= amount;
+                    target.balance += amount;
+                    markChanged();
+                    target.markChanged();
+                    return true;
+                }
+            }
+        }
+    }
+
+    public synchronized int getPickaxeLevel() { return pickaxeLevel; }
+    public synchronized void setPickaxeLevel(int pickaxeLevel) {
+        if (pickaxeLevel < 1) throw new IllegalArgumentException("O nível da picareta deve ser positivo.");
+        this.pickaxeLevel = pickaxeLevel;
+        markChanged();
+    }
+    public synchronized double getPickaxeXp() { return pickaxeXp; }
+    public synchronized void setPickaxeXp(double pickaxeXp) {
+        this.pickaxeXp = requireNonNegative(pickaxeXp, "experiência da picareta");
+        markChanged();
+    }
+
+    public synchronized boolean addPickaxeXp(double amount) {
+        requireNonNegative(amount, "experiência da picareta");
         boolean leveledUp = false;
         double xpNeeded = this.pickaxeLevel * 1000.0;
-        this.pickaxeXp += amount;
+        this.pickaxeXp = requireFinite(this.pickaxeXp + amount, "experiência da picareta");
         while (this.pickaxeXp >= xpNeeded) {
             this.pickaxeXp -= xpNeeded;
             this.pickaxeLevel++;
             xpNeeded = this.pickaxeLevel * 1000.0;
             leveledUp = true;
         }
-        this.dirty = true;
+        markChanged();
         return leveledUp;
     }
 
-    public int getSkillLevel(String skill) {
+    public synchronized int getSkillLevel(String skill) {
         return pickaxeSkills.getOrDefault(skill.toLowerCase(), 0);
     }
 
-    public void upgradeSkill(String skill) {
+    public synchronized void upgradeSkill(String skill) {
         String key = skill.toLowerCase();
         pickaxeSkills.put(key, getSkillLevel(key) + 1);
-        this.dirty = true;
+        markChanged();
     }
 
-    public void loadSkillsFromString(String data) {
+    public synchronized void loadSkillsFromString(String data) {
         pickaxeSkills.clear();
         if (data == null || data.isEmpty()) return;
         for (String pair : data.split(",")) {
@@ -120,7 +174,7 @@ public class TWUser {
         }
     }
 
-    public String getSkillsAsString() {
+    public synchronized String getSkillsAsString() {
         if (pickaxeSkills.isEmpty()) return "";
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String, Integer> entry : pickaxeSkills.entrySet()) {
@@ -129,6 +183,39 @@ public class TWUser {
         return sb.toString();
     }
 
-    public String getMissoesData() { return missoesData == null ? "" : missoesData; }
-    public void setMissoesData(String missoesData) { this.missoesData = missoesData; this.dirty = true; }
+    public synchronized String getMissoesData() { return missoesData == null ? "" : missoesData; }
+    public synchronized void setMissoesData(String missoesData) {
+        this.missoesData = missoesData;
+        markChanged();
+    }
+
+    public synchronized TWUserSnapshot snapshot() {
+        return new TWUserSnapshot(uuid, name, tokens, rankId, prestigeId, blocosQuebrados,
+                dinheiroMina, balance, pickaxeLevel, pickaxeXp, getSkillsAsString(),
+                getMissoesData(), version);
+    }
+
+    public synchronized void markSaved(long savedVersion) {
+        if (version == savedVersion) dirty = false;
+    }
+
+    private void markChanged() {
+        dirty = true;
+        version++;
+    }
+
+    private static void requireNonNegative(long value, String field) {
+        if (value < 0) throw new IllegalArgumentException("O valor de " + field + " não pode ser negativo.");
+    }
+
+    private static double requireNonNegative(double value, String field) {
+        requireFinite(value, field);
+        if (value < 0) throw new IllegalArgumentException("O valor de " + field + " não pode ser negativo.");
+        return value;
+    }
+
+    private static double requireFinite(double value, String field) {
+        if (!Double.isFinite(value)) throw new IllegalArgumentException("O valor de " + field + " deve ser finito.");
+        return value;
+    }
 }

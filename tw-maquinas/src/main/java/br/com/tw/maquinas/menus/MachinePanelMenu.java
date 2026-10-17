@@ -4,6 +4,7 @@ import br.com.tw.core.TWCorePlugin;
 import br.com.tw.core.data.TWUser;
 import br.com.tw.core.menus.TWMenu;
 import br.com.tw.core.utils.TWFormat;
+import br.com.tw.core.utils.TWMenuFrame;
 import br.com.tw.economia.TWEconomiaPlugin;
 import br.com.tw.maquinas.TWMaquinasPlugin;
 import br.com.tw.maquinas.managers.MachineManager;
@@ -47,6 +48,7 @@ public class MachinePanelMenu implements TWMenu {
             glass.setItemMeta(gMeta);
             inventory.setItem(i, glass);
         }
+        TWMenuFrame.apply(inventory);
 
         if (type == null) return;
 
