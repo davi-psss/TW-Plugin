@@ -83,7 +83,7 @@ public final class CaixaCommand implements CommandExecutor {
         }
         Player player = (Player) sender;
         CrateType type = CrateType.fromId(args[1]);
-        Block block = player.getTargetBlock((java.util.HashSet<Byte>) null, 6);
+        Block block = player.getTargetBlock((java.util.Set<Material>) null, 6);
         if (type == null || block == null || block.getType() == Material.AIR) {
             sender.sendMessage("§cTipo inválido ou nenhum bloco alvo.");
             return;
@@ -102,7 +102,7 @@ public final class CaixaCommand implements CommandExecutor {
             return;
         }
         Player player = (Player) sender;
-        Block block = player.getTargetBlock((java.util.HashSet<Byte>) null, 6);
+        Block block = player.getTargetBlock((java.util.Set<Material>) null, 6);
         if (block == null) {
             player.sendMessage("§cNenhum bloco alvo.");
             return;

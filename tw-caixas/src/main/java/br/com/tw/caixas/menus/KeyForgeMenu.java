@@ -15,17 +15,14 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.Arrays;
-import java.util.List;
 
 public final class KeyForgeMenu implements TWMenu {
     private static final int[] SLOTS = {10, 12, 14, 16};
-    private final TWCaixasPlugin plugin;
     private final CrateService service;
     private final CrateAccount account;
     private final Inventory inventory;
 
     public KeyForgeMenu(TWCaixasPlugin plugin, CrateService service, Player player, CrateAccount account) {
-        this.plugin = plugin;
         this.service = service;
         this.account = account;
         inventory = Bukkit.createInventory(this, 27, "§8Forja de Chaves");

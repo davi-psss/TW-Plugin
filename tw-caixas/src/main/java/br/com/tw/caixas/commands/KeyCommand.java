@@ -1,7 +1,6 @@
 package br.com.tw.caixas.commands;
 
 import br.com.tw.caixas.TWCaixasPlugin;
-import br.com.tw.caixas.data.CrateAccount;
 import br.com.tw.caixas.managers.CrateOpenings;
 import br.com.tw.caixas.managers.CrateService;
 import br.com.tw.caixas.managers.PlayerEffectMemory;
@@ -10,7 +9,6 @@ import br.com.tw.caixas.menus.KeyPanelMenu;
 import br.com.tw.caixas.model.CrateEffect;
 import br.com.tw.caixas.model.CrateType;
 import org.bukkit.Bukkit;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;

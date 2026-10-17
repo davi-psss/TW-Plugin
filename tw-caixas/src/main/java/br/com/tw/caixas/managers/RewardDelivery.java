@@ -3,7 +3,6 @@ package br.com.tw.caixas.managers;
 import br.com.tw.caixas.TWCaixasPlugin;
 import br.com.tw.caixas.model.CrateReward;
 import br.com.tw.caixas.model.RewardGrant;
-import br.com.tw.caixas.model.RewardKind;
 import br.com.tw.core.TWCorePlugin;
 import br.com.tw.core.data.TWUser;
 import br.com.tw.economia.TWEconomiaPlugin;
