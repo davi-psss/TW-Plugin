@@ -30,7 +30,9 @@ public class MachineRepository {
                 "speed_level INT DEFAULT 1, " +
                 "storage_level INT DEFAULT 1, " +
                 "fuel_eff_level INT DEFAULT 1, " +
-                "total_generated DOUBLE PRECISION DEFAULT 0.0" +
+                "total_generated DOUBLE PRECISION DEFAULT 0.0, " +
+                "battery_cycles BIGINT DEFAULT 0, " +
+                "lubricant_cycles BIGINT DEFAULT 0" +
                 ")";
 
         try (Connection conn = db.getConnection(); Statement stmt = conn.createStatement()) {
@@ -40,10 +42,12 @@ public class MachineRepository {
             stmt.execute("ALTER TABLE tw_machines ADD COLUMN IF NOT EXISTS storage_level INT DEFAULT 1");
             stmt.execute("ALTER TABLE tw_machines ADD COLUMN IF NOT EXISTS fuel_eff_level INT DEFAULT 1");
             stmt.execute("ALTER TABLE tw_machines ADD COLUMN IF NOT EXISTS total_generated DOUBLE PRECISION DEFAULT 0.0");
+            stmt.execute("ALTER TABLE tw_machines ADD COLUMN IF NOT EXISTS battery_cycles BIGINT DEFAULT 0");
+            stmt.execute("ALTER TABLE tw_machines ADD COLUMN IF NOT EXISTS lubricant_cycles BIGINT DEFAULT 0");
         } catch (SQLException e) {
             throw failure("Falha ao criar ou atualizar a tabela de máquinas.", e);
         }
-        db.recordSchemaVersion("tw_maquinas", 2);
+        db.recordSchemaVersion("tw_maquinas", 3);
     }
 
     public Map<String, PlacedMachine> loadAllMachines() {
@@ -66,7 +70,9 @@ public class MachineRepository {
                         rs.getInt("speed_level"),
                         rs.getInt("storage_level"),
                         rs.getInt("fuel_eff_level"),
-                        rs.getDouble("total_generated")
+                        rs.getDouble("total_generated"),
+                        rs.getLong("battery_cycles"),
+                        rs.getLong("lubricant_cycles")
                 );
                 map.put(machine.getLocationKey(), machine);
             }
@@ -78,12 +84,13 @@ public class MachineRepository {
     }
 
     public void saveMachine(PlacedMachine m) {
-        String query = "INSERT INTO tw_machines (loc_key, owner_uuid, owner_name, type_id, stack_amount, fuel, stored_earnings, speed_level, storage_level, fuel_eff_level, total_generated) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
+        String query = "INSERT INTO tw_machines (loc_key, owner_uuid, owner_name, type_id, stack_amount, fuel, stored_earnings, speed_level, storage_level, fuel_eff_level, total_generated, battery_cycles, lubricant_cycles) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
                 "ON CONFLICT (loc_key) DO UPDATE SET stack_amount = EXCLUDED.stack_amount, fuel = EXCLUDED.fuel, " +
                 "stored_earnings = EXCLUDED.stored_earnings, speed_level = EXCLUDED.speed_level, " +
                 "storage_level = EXCLUDED.storage_level, fuel_eff_level = EXCLUDED.fuel_eff_level, " +
-                "total_generated = EXCLUDED.total_generated";
+                "total_generated = EXCLUDED.total_generated, battery_cycles = EXCLUDED.battery_cycles, " +
+                "lubricant_cycles = EXCLUDED.lubricant_cycles";
 
         try (Connection conn = db.getConnection(); PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setString(1, m.getLocationKey());
@@ -97,6 +104,8 @@ public class MachineRepository {
             ps.setInt(9, m.getStorageLevel());
             ps.setInt(10, m.getFuelEfficiencyLevel());
             ps.setDouble(11, m.getTotalGenerated());
+            ps.setLong(12, m.getBatteryCycles());
+            ps.setLong(13, m.getLubricantCycles());
 
             ps.executeUpdate();
 

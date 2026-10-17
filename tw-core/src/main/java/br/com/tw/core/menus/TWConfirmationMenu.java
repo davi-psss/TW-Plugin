@@ -30,12 +30,13 @@ public final class TWConfirmationMenu implements TWMenu {
 
     @Override
     public void onClick(InventoryClickEvent event) {
-        if (completed || event.getClickedInventory() != inventory) return;
-        if (event.getSlot() == 11) {
+        int rawSlot = event.getRawSlot();
+        if (completed || rawSlot < 0 || rawSlot >= inventory.getSize()) return;
+        if (rawSlot == 11) {
             completed = true;
             player.closeInventory();
             confirmation.run();
-        } else if (event.getSlot() == 15) {
+        } else if (rawSlot == 15) {
             completed = true;
             player.closeInventory();
             player.sendMessage(ChatColor.YELLOW + "Ação cancelada.");

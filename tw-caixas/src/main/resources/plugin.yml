@@ -1,0 +1,15 @@
+name: tw-caixas
+version: 1.0
+main: br.com.tw.caixas.TWCaixasPlugin
+depend: [tw-core, tw-economia, tw-minas, tw-spawners, tw-maquinas, tw-farms, tw-ranks, tw-terrenos]
+commands:
+  key:
+    description: Abre o painel de chaves virtuais
+    aliases: [caixas]
+  caixa:
+    description: Administração das caixas
+    permission: tw.admin
+permissions:
+  tw.admin:
+    description: Permite administrar as caixas
+    default: op

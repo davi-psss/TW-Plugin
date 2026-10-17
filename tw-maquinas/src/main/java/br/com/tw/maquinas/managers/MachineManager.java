@@ -120,22 +120,35 @@ public class MachineManager {
         Location loc = machine.getBukkitLocation();
         if (loc == null || !loc.getWorld().isChunkLoaded(loc.getBlockX() >> 4, loc.getBlockZ() >> 4)) return;
 
-        if (machine.getFuel() > 0) {
+        if (machine.getFuel() > 0 || machine.getBatteryCycles() > 0) {
             double realCycleSeconds = Math.max(1.0,
                     type.getCycleSeconds() - ((machine.getSpeedLevel() - 1) * 0.5));
             if (nowSec - machine.getLastTickEpochSeconds() >= realCycleSeconds) {
                 machine.setLastTickEpochSeconds(nowSec);
                 double fuelSaveChance = Math.min(1.0, Math.max(0.0,
                         (machine.getFuelEfficiencyLevel() - 1) * 0.05));
-                boolean consumeFuel = Math.random() >= fuelSaveChance;
+                boolean batteryCycle = machine.getBatteryCycles() > 0;
+                boolean consumeFuel = !batteryCycle && Math.random() >= fuelSaveChance;
 
-                if (!consumeFuel || machine.consumeFuel(1)) {
+                if (batteryCycle || !consumeFuel || machine.consumeFuel(1)) {
+                    if (batteryCycle) machine.consumeBatteryCycle();
                     double generated = type.getValuePerCycle() * machine.getStackAmount();
+                    boolean lubricantCycle = machine.getLubricantCycles() > 0;
+                    if (lubricantCycle) {
+                        generated *= 3.0;
+                        machine.consumeLubricantCycle();
+                    }
+                    br.com.tw.core.events.TWMachineCycleEvent cycleEvent =
+                            new br.com.tw.core.events.TWMachineCycleEvent(machine.getOwnerUuid(),
+                                    machine.getBukkitLocation(), generated);
+                    cycleEvent.setBypassStorageLimit(lubricantCycle);
+                    Bukkit.getPluginManager().callEvent(cycleEvent);
+                    generated = cycleEvent.getGenerated();
                     double maxStorage = generated * (10 * machine.getStorageLevel());
                     if (!Double.isFinite(generated) || !Double.isFinite(maxStorage)) {
                         throw new IllegalStateException("Produção excedeu o limite numérico.");
                     }
-                    if (machine.getStoredEarnings() < maxStorage) {
+                    if (machine.getStoredEarnings() < maxStorage || cycleEvent.isBypassStorageLimit()) {
                         machine.addStoredEarnings(generated);
                         machine.addTotalGenerated(generated);
                         playMachineEffects(loc, type.getId());
@@ -144,6 +157,36 @@ public class MachineManager {
             }
         }
         plugin.getHologramManager().updateOrCreateHologram(machine, type);
+    }
+
+    public double applyOverclock(PlacedMachine machine, long seconds) {
+        if (machine == null || seconds < 1L) {
+            throw new IllegalArgumentException("Máquina e duração de overclock são obrigatórias.");
+        }
+        MachineType type = machineTypes.get(machine.getTypeId());
+        if (type == null) throw new IllegalArgumentException("Tipo de máquina desconhecido.");
+
+        double cycleSeconds = Math.max(1.0,
+                type.getCycleSeconds() - ((machine.getSpeedLevel() - 1) * 0.5));
+        double cycles = Math.floor(seconds / cycleSeconds);
+        double perCycle = type.getValuePerCycle() * machine.getStackAmount();
+        double production = perCycle * cycles;
+        double capacity = perCycle * (10.0 * machine.getStorageLevel());
+        if (!Double.isFinite(production) || !Double.isFinite(capacity)) {
+            throw new IllegalStateException("Overclock excedeu o limite numérico.");
+        }
+
+        double credited = Math.min(production, Math.max(0.0, capacity - machine.getStoredEarnings()));
+        if (credited > 0.0) {
+            machine.addStoredEarnings(credited);
+            machine.addTotalGenerated(credited);
+            saveMachineAsync(machine);
+        }
+        Location location = machine.getBukkitLocation();
+        if (location != null) {
+            plugin.getHologramManager().updateOrCreateHologram(machine, type);
+        }
+        return credited;
     }
 
     private void playMachineEffects(Location loc, String typeId) {

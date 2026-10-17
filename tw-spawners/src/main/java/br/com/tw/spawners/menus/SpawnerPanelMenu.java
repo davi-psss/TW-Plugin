@@ -200,8 +200,17 @@ public class SpawnerPanelMenu implements TWMenu {
             long finalTokens = spawner.getStoredTokens();
             long finalXp = spawner.getStoredXp();
             long finalSouls = spawner.getStoredSouls();
+            boolean soulsRemainInSilo = false;
+            if (finalSouls > 0) {
+                java.util.Map<Integer, ItemStack> leftovers =
+                        player.getInventory().addItem(manager.createSoulItem(finalSouls));
+                soulsRemainInSilo = !leftovers.isEmpty();
+            }
 
-            spawner.setStoredMoney(0); spawner.setStoredTokens(0); spawner.setStoredXp(0); spawner.setStoredSouls(0);
+            spawner.setStoredMoney(0);
+            spawner.setStoredTokens(0);
+            spawner.setStoredXp(0);
+            spawner.setStoredSouls(soulsRemainInSilo ? finalSouls : 0L);
             manager.saveSpawnerAsync(spawner);
             TWSpawnersPlugin.getInstance().getHologramManager().updateOrCreateHologram(spawner, type);
 
@@ -210,16 +219,11 @@ public class SpawnerPanelMenu implements TWMenu {
             TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
 
             if (finalXp > 0) player.giveExp((int) finalXp);
-            if (finalSouls > 0) {
-                if (player.getInventory().firstEmpty() != -1) {
-                    player.getInventory().addItem(manager.createSoulItem(finalSouls));
-                } else {
-                    player.getWorld().dropItem(player.getLocation(), manager.createSoulItem(finalSouls));
-                }
-            }
-
             player.playSound(player.getLocation(), Sound.LEVEL_UP, 1f, 1.5f);
             player.sendMessage("§a✔ Cofre Resgatado! §2$" + TWFormat.formatarDinheiro(finalPayout) + " §8| §b" + TWFormat.formatarDinheiro(finalTokens) + " T §8| §a" + finalXp + " XP §8| §d" + finalSouls + " Almas");
+            if (soulsRemainInSilo) {
+                player.sendMessage("§eO inventário está cheio; as almas continuam guardadas no silo.");
+            }
             setupItems();
         }
         else if (slot == 29) {

@@ -137,12 +137,15 @@ public class SpawnerShopMenu implements TWMenu {
 
     private void purchaseSpawner(SpawnerType type, long amount, double price) {
         if (user.removeBalance(price)) {
-            TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
             java.util.Map<Integer, ItemStack> leftovers =
                     player.getInventory().addItem(manager.createSpawnerItem(type, amount));
-            for (ItemStack leftover : leftovers.values()) {
-                player.getWorld().dropItemNaturally(player.getLocation(), leftover);
+            if (!leftovers.isEmpty()) {
+                user.addBalance(price);
+                TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
+                player.sendMessage(ChatColor.RED + "O inventário encheu durante a confirmação; a compra foi cancelada e o saldo devolvido.");
+                return;
             }
+            TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
             player.playSound(player.getLocation(), Sound.LEVEL_UP, 1f, 1.5f);
             player.sendMessage(ChatColor.GREEN + "Compraste " + amount + "x " + type.getDisplayName()
                     + ChatColor.GREEN + " por $" + TWFormat.formatarDinheiro(price) + "!");

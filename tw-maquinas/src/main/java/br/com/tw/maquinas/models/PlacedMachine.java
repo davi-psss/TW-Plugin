@@ -23,6 +23,8 @@ public class PlacedMachine {
     private int storageLevel;
     private int fuelEfficiencyLevel;
     private double totalGenerated;
+    private long batteryCycles;
+    private long lubricantCycles;
 
     // Construtor completo (Usado pelo MachineRepository ao carregar do banco de dados)
     public PlacedMachine(String locationKey, UUID ownerUuid, String ownerName, String typeId, long stackAmount, long fuel, double storedEarnings, int speedLevel, int storageLevel, int fuelEfficiencyLevel, double totalGenerated) {
@@ -97,9 +99,47 @@ public class PlacedMachine {
     public double getTotalGenerated() { return totalGenerated; }
     public void addTotalGenerated(double amount) { this.totalGenerated += amount; }
 
+    public PlacedMachine(String locationKey, UUID ownerUuid, String ownerName, String typeId,
+            long stackAmount, long fuel, double storedEarnings, int speedLevel, int storageLevel,
+            int fuelEfficiencyLevel, double totalGenerated, long batteryCycles, long lubricantCycles) {
+        this(locationKey, ownerUuid, ownerName, typeId, stackAmount, fuel, storedEarnings,
+                speedLevel, storageLevel, fuelEfficiencyLevel, totalGenerated);
+        if (batteryCycles < 0 || lubricantCycles < 0) {
+            throw new IllegalArgumentException("Cargas de máquina não podem ser negativas.");
+        }
+        this.batteryCycles = batteryCycles;
+        this.lubricantCycles = lubricantCycles;
+    }
+
+    public synchronized long getBatteryCycles() { return batteryCycles; }
+    public synchronized long getLubricantCycles() { return lubricantCycles; }
+
+    public synchronized void addBatteryCycles(long amount) {
+        if (amount < 1) throw new IllegalArgumentException("Ciclos de bateria devem ser positivos.");
+        batteryCycles = Math.addExact(batteryCycles, amount);
+    }
+
+    public synchronized void addLubricantCycles(long amount) {
+        if (amount < 1) throw new IllegalArgumentException("Ciclos de lubrificante devem ser positivos.");
+        lubricantCycles = Math.addExact(lubricantCycles, amount);
+    }
+
+    public synchronized boolean consumeBatteryCycle() {
+        if (batteryCycles < 1) return false;
+        batteryCycles--;
+        return true;
+    }
+
+    public synchronized boolean consumeLubricantCycle() {
+        if (lubricantCycles < 1) return false;
+        lubricantCycles--;
+        return true;
+    }
+
     public PlacedMachine snapshot() {
         PlacedMachine copy = new PlacedMachine(locationKey, ownerUuid, ownerName, typeId, stackAmount, fuel,
-                storedEarnings, speedLevel, storageLevel, fuelEfficiencyLevel, totalGenerated);
+                storedEarnings, speedLevel, storageLevel, fuelEfficiencyLevel, totalGenerated,
+                batteryCycles, lubricantCycles);
         copy.setLastTickEpochSeconds(lastTickEpochSeconds);
         return copy;
     }

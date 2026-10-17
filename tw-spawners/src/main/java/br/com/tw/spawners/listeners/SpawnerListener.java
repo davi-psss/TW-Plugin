@@ -123,11 +123,14 @@ public class SpawnerListener implements Listener {
             return;
         }
         if (user.removeBalance(totalCost)) {
-            TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
             Map<Integer, ItemStack> leftovers = player.getInventory().addItem(manager.createSpawnerItem(type, amount));
-            for (ItemStack leftover : leftovers.values()) {
-                player.getWorld().dropItemNaturally(player.getLocation(), leftover);
+            if (!leftovers.isEmpty()) {
+                user.addBalance(totalCost);
+                player.sendMessage(ChatColor.RED + "O inventário encheu durante a confirmação; a compra foi cancelada e o saldo devolvido.");
+                TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
+                return;
             }
+            TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
             player.playSound(player.getLocation(), Sound.LEVEL_UP, 1f, 1.5f);
             player.sendMessage(ChatColor.GREEN + "Compraste " + amount + "x " + type.getDisplayName()
                     + ChatColor.GREEN + " por $" + TWFormat.formatarDinheiro(totalCost) + "!");
@@ -235,8 +238,34 @@ public class SpawnerListener implements Listener {
         event.setCancelled(true);
         Player player = event.getPlayer();
         ItemStack hand = player.getItemInHand();
-
+        if (TWItemTags.has(hand, "tw_crate_effect")
+                && !"free_spawner_upgrade".equals(TWItemTags.getString(hand, "tw_crate_effect"))) return;
         if (hand != null) {
+            if ("free_spawner_upgrade".equals(TWItemTags.getString(hand, "tw_crate_effect"))) {
+                if (!spawner.getOwnerUuid().equals(player.getUniqueId()) && !player.hasPermission("tw.admin")) {
+                    player.sendMessage("§cSó o dono pode usar este talismã.");
+                    return;
+                }
+                long charges = TWItemTags.getLong(hand, "tw_crate_charges", 0L);
+                if (charges < 1) {
+                    player.sendMessage("§cEste talismã já não tem cargas.");
+                    return;
+                }
+                if (player.isSneaking()) spawner.upgradeLootLevel();
+                else spawner.upgradeSpeedLevel();
+                manager.saveSpawnerAsync(spawner);
+                if (charges == 1) {
+                    player.setItemInHand(null);
+                } else {
+                    java.util.Map<String, Object> tags = new java.util.HashMap<>();
+                    tags.put("tw_crate_charges", charges - 1);
+                    player.setItemInHand(TWItemTags.set(hand, tags));
+                }
+                player.sendMessage(player.isSneaking()
+                        ? "§aTalismã aplicado: melhoria de loot grátis."
+                        : "§aTalismã aplicado: melhoria de velocidade grátis.");
+                return;
+            }
             double multiplier;
             int minutes;
             if (TWItemTags.has(hand, "tw_spawner_booster")) {
@@ -331,6 +360,9 @@ public class SpawnerListener implements Listener {
 
         Player killer = entity.getKiller();
         long killedAmount = (killer != null && killer.isSneaking()) ? currentStack : 1L;
+        br.com.tw.core.events.TWSpawnerKillEvent crateEvent =
+                new br.com.tw.core.events.TWSpawnerKillEvent(killer, entity, killedAmount);
+        Bukkit.getPluginManager().callEvent(crateEvent);
         long remaining = currentStack - killedAmount;
 
         if (killer != null) {
@@ -355,10 +387,32 @@ public class SpawnerListener implements Listener {
                     if (Math.random() < 0.001) soulsWon += 1;
                 }
 
+                soulsWon = Math.addExact(soulsWon, crateEvent.getBonusSouls());
                 if (tokensWon > 0) user.addTokens(tokensWon);
                 if (soulsWon > 0) {
-                    if (killer.getInventory().firstEmpty() != -1) killer.getInventory().addItem(manager.createSoulItem(soulsWon));
-                    else killer.getWorld().dropItem(killer.getLocation(), manager.createSoulItem(soulsWon));
+                    java.util.Map<Integer, ItemStack> leftovers =
+                            killer.getInventory().addItem(manager.createSoulItem(soulsWon));
+                    if (!leftovers.isEmpty()) {
+                        PlacedSpawner placedSpawner = manager.getSpawnerAt(anchor);
+                        if (placedSpawner == null) {
+                            TWSpawnersPlugin.getInstance().getLogger().severe(
+                                    "Não foi possível entregar " + soulsWon + " almas ao jogador "
+                                            + killer.getName() + ": inventário cheio e spawner não registado em " + anchor + ".");
+                            killer.sendMessage("§cO inventário está cheio e as almas não puderam ser entregues. Contacta a equipa.");
+                        } else {
+                            try {
+                                placedSpawner.setStoredSouls(Math.addExact(placedSpawner.getStoredSouls(), soulsWon));
+                                manager.saveSpawnerAsync(placedSpawner);
+                                killer.sendMessage("§dO inventário está cheio; §e" + soulsWon
+                                        + " almas §dforam guardadas no cofre do spawner.");
+                            } catch (ArithmeticException e) {
+                                TWSpawnersPlugin.getInstance().getLogger().severe(
+                                        "O cofre de almas excedeu o limite numérico no spawner "
+                                                + placedSpawner.getLocationKey() + ".");
+                                killer.sendMessage("§cO cofre de almas atingiu o limite. Contacta a equipa.");
+                            }
+                        }
+                    }
                 }
 
                 killer.playSound(killer.getLocation(), Sound.ORB_PICKUP, 0.4f, 1.8f);

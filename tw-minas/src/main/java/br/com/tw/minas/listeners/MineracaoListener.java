@@ -158,6 +158,8 @@ public class MineracaoListener implements Listener {
         double prestigeMult = getPrestigeMultiplier(user.getPrestigeId());
         double globalBooster = eco.getGlobalBooster() * eventManager.getEventMultiplier();
 
+        org.bukkit.Bukkit.getPluginManager().callEvent(
+                new br.com.tw.core.events.TWMiningPrepareEvent(event.getPlayer(), mainBlock, blocksToBreak));
         for (Block b : blocksToBreak) {
             if (b.getType() == Material.AIR || eventManager.isSpecialBlock(b.getLocation())) continue;
             double basePrice = eco.getBlockPrice(b.getType(), b.getData());
@@ -167,7 +169,11 @@ public class MineracaoListener implements Listener {
                 if (lvlJackpot > 0 && Math.random() < (lvlJackpot * 0.001)) {
                     blockPrice *= 10;
                 }
-                totalMoney += (blockPrice * prestigeMult * globalBooster);
+                br.com.tw.core.events.TWBlockMinedEvent minedEvent =
+                        new br.com.tw.core.events.TWBlockMinedEvent(event.getPlayer(), b,
+                                blockPrice * prestigeMult * globalBooster);
+                org.bukkit.Bukkit.getPluginManager().callEvent(minedEvent);
+                totalMoney += minedEvent.getPayout();
 
                 // Remove o bloco SEM disparar eventos de física nos blocos adjacentes (Zero Lag)
                 b.setTypeIdAndData(0, (byte) 0, false);

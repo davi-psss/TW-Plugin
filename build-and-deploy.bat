@@ -5,7 +5,7 @@ title TW Plugin - Build e Deploy
 set "PROJECT_DIR=%~dp0"
 set "SERVER_DIR=%PROJECT_DIR%..\TW-Network"
 set "SERVER_PLUGINS=%SERVER_DIR%\plugins"
-set "MODULES=tw-core tw-economia tw-lobby tw-maquinas tw-minas tw-ranks tw-spawners tw-terrenos"
+set "MODULES=tw-core tw-economia tw-lobby tw-maquinas tw-minas tw-ranks tw-spawners tw-terrenos tw-farms tw-caixas"
 
 echo ==========================================
 echo       TW PLUGIN - BUILD E DEPLOY
@@ -58,17 +58,21 @@ if errorlevel 1 (
 )
 
 echo [1/3] Compilando todos os modulos e executando os testes...
-call mvn clean package
+call mvn -U clean package
 if errorlevel 1 goto :build_failed
 
 echo.
 echo [2/3] Preparando e validando os arquivos...
 if not exist "%STAGE_DIR%\" mkdir "%STAGE_DIR%"
 if errorlevel 1 goto :stage_failed
-call mvn -Pdeploy-local antrun:run "-Dtw.deploy.dir=%STAGE_DIR%"
-if errorlevel 1 goto :stage_failed
 
 for %%M in (%MODULES%) do (
+    if not exist "%PROJECT_DIR%%%M\target\%%M-1.0-SNAPSHOT.jar" (
+        echo [ERRO] Artefato de build ausente: %%M-1.0-SNAPSHOT.jar
+        goto :stage_failed
+    )
+    copy /y "%PROJECT_DIR%%%M\target\%%M-1.0-SNAPSHOT.jar" "%STAGE_DIR%\" > nul
+    if errorlevel 1 goto :stage_failed
     if not exist "%STAGE_DIR%\%%M-1.0-SNAPSHOT.jar" (
         echo [ERRO] Artefato obrigatorio ausente: %%M-1.0-SNAPSHOT.jar
         goto :stage_failed

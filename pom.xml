@@ -14,7 +14,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
-    <!-- Aqui nós declaramos os nossos submódulos. Vamos começar só com o core -->
+    <!-- Aqui declaramos os módulos do servidor. -->
     <modules>
         <module>tw-core</module>
         <module>tw-economia</module>
@@ -24,6 +24,8 @@
         <module>tw-terrenos</module>
         <module>tw-maquinas</module>
         <module>tw-spawners</module>
+        <module>tw-farms</module>
+        <module>tw-caixas</module>
     </modules>
 
     <repositories>

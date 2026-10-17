@@ -124,6 +124,7 @@ public class MachineListener implements Listener {
         event.setCancelled(true);
         Player player = event.getPlayer();
         ItemStack hand = player.getItemInHand();
+        if (TWItemTags.has(hand, "tw_crate_effect")) return;
 
         if (hand != null) {
             long fuelUnits;

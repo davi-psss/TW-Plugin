@@ -157,8 +157,13 @@ public class MachineShopMenu implements TWMenu {
 
     private void purchaseMachine(MachineType type, long amount, double totalCost) {
         if (user.removeBalance(totalCost)) {
+            if (!giveItem(manager.createMachineItem(type, amount))) {
+                user.addBalance(totalCost);
+                TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
+                player.sendMessage(ChatColor.RED + "O inventário encheu durante a confirmação; a compra foi cancelada e o saldo devolvido.");
+                return;
+            }
             TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
-            giveItem(manager.createMachineItem(type, amount));
             player.playSound(player.getLocation(), Sound.LEVEL_UP, 1f, 1.5f);
             player.sendMessage(ChatColor.GREEN + "Compraste " + amount + "x " + type.getDisplayName()
                     + ChatColor.GREEN + " por $" + TWFormat.formatarDinheiro(totalCost) + "!");
@@ -171,8 +176,13 @@ public class MachineShopMenu implements TWMenu {
 
     private void purchaseFuel(int units, double price) {
         if (user.removeBalance(price)) {
+            if (!giveItem(manager.createFuelItem(units))) {
+                user.addBalance(price);
+                TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
+                player.sendMessage(ChatColor.RED + "O inventário encheu durante a confirmação; a compra foi cancelada e o saldo devolvido.");
+                return;
+            }
             TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
-            giveItem(manager.createFuelItem(units));
             player.playSound(player.getLocation(), Sound.ORB_PICKUP, 1f, 1.2f);
             player.sendMessage(ChatColor.GREEN + "Compraste " + units + "x ciclos de Combustível!");
         } else {
@@ -194,11 +204,9 @@ public class MachineShopMenu implements TWMenu {
         }
     }
 
-    private void giveItem(ItemStack item) {
+    private boolean giveItem(ItemStack item) {
         java.util.Map<Integer, ItemStack> leftovers = player.getInventory().addItem(item);
-        for (ItemStack leftover : leftovers.values()) {
-            player.getWorld().dropItemNaturally(player.getLocation(), leftover);
-        }
+        return leftovers.isEmpty();
     }
 
     @Override

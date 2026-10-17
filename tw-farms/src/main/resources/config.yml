@@ -1,0 +1,153 @@
+farm:
+  base-silo-capacity: 50000
+  max-process-per-cycle: 250
+  autosave-ticks: 200
+  crop-owner-worlds-only: true
+  hologram-update-ticks: 40
+  physical-crop-harvest-radius: 1
+  physical-golden-chance: 0.01
+  growth-booster-max-duration-seconds: 3600
+
+shop:
+  confirmation-price-threshold: 250000.0
+  fertilizer:
+    small:
+      price: 1000.0
+      units: 100
+      soil-level: 1
+    medium:
+      price: 9000.0
+      units: 1000
+      soil-level: 2
+    industrial:
+      price: 80000.0
+      units: 10000
+      soil-level: 3
+  growth-boosters:
+    x1_5:
+      price: 25000.0
+      multiplier: 1.5
+      duration-seconds: 1800
+    x2:
+      price: 75000.0
+      multiplier: 2.0
+      duration-seconds: 1800
+  harvester-hoe:
+    price: 250000.0
+
+upgrades:
+  speed-token-base-cost: 1000
+  storage-token-base-cost: 800
+  quality-token-base-cost: 1200
+  auto-sell-token-cost: 5000
+  max-level: 25
+
+alchemy:
+  xp:
+    xp: 250
+    material: EMERALD
+    material-amount: 8
+    fertilizer-units: 1000
+    soil-level: 2
+  souls:
+    souls: 25
+    material: DIAMOND
+    material-amount: 4
+    fertilizer-units: 5000
+    soil-level: 3
+
+fertilizer:
+  growth-multiplier-by-soil:
+    "1": 1.0
+    "2": 0.8
+    "3": 0.6
+  golden-chance-by-soil:
+    "1": 0.05
+    "2": 0.10
+    "3": 0.15
+
+farms:
+  TRIGO:
+    nome: "&eSementes de Trigo"
+    material: HAY_BLOCK
+    planting-item: SEEDS
+    produto: WHEAT
+    plant-materials: [CROPS]
+    harvest-materials: [CROPS]
+    rank-necessario: CARVAO
+    custo-compra: 50000.0
+    valor-venda: 20.0
+    ciclo-segundos: 15
+    fertilizante-por-ciclo: 1
+  CENOURA:
+    nome: "&6Cenouras para plantio"
+    material: CARROT_ITEM
+    planting-item: CARROT_ITEM
+    produto: CARROT_ITEM
+    plant-materials: [CARROT]
+    harvest-materials: [CARROT]
+    rank-necessario: SINO
+    custo-compra: 500000.0
+    valor-venda: 80.0
+    ciclo-segundos: 14
+    fertilizante-por-ciclo: 1
+  BATATA:
+    nome: "&eBatatas para plantio"
+    material: POTATO_ITEM
+    planting-item: POTATO_ITEM
+    produto: POTATO_ITEM
+    plant-materials: [POTATO]
+    harvest-materials: [POTATO]
+    rank-necessario: SINO
+    custo-compra: 500000.0
+    valor-venda: 80.0
+    ciclo-segundos: 14
+    fertilizante-por-ciclo: 1
+  CANA:
+    nome: "&aCana-de-açúcar para plantio"
+    material: SUGAR_CANE
+    planting-item: SUGAR_CANE
+    produto: SUGAR_CANE
+    plant-materials: [SUGAR_CANE_BLOCK]
+    harvest-materials: [SUGAR_CANE_BLOCK]
+    rank-necessario: BISCOITO
+    custo-compra: 5000000.0
+    valor-venda: 350.0
+    ciclo-segundos: 12
+    fertilizante-por-ciclo: 1
+  CACTO:
+    nome: "&2Cacto para plantio"
+    material: CACTUS
+    planting-item: CACTUS
+    produto: CACTUS
+    plant-materials: [CACTUS]
+    harvest-materials: [CACTUS]
+    rank-necessario: RENA
+    custo-compra: 50000000.0
+    valor-venda: 1500.0
+    ciclo-segundos: 10
+    fertilizante-por-ciclo: 1
+  MELANCIA:
+    nome: "&aSementes de Melancia"
+    material: MELON
+    planting-item: MELON_SEEDS
+    produto: MELON
+    plant-materials: [MELON_STEM]
+    harvest-materials: [MELON_BLOCK]
+    rank-necessario: RENA
+    custo-compra: 50000000.0
+    valor-venda: 1800.0
+    ciclo-segundos: 10
+    fertilizante-por-ciclo: 1
+  FUNGUS:
+    nome: "&dFungo do Nether para plantio"
+    material: NETHER_STALK
+    planting-item: NETHER_STALK
+    produto: NETHER_STALK
+    plant-materials: [NETHER_STALK]
+    harvest-materials: [NETHER_STALK]
+    rank-necessario: NOEL
+    custo-compra: 500000000.0
+    valor-venda: 15000.0
+    ciclo-segundos: 8
+    fertilizante-por-ciclo: 1

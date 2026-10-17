@@ -1,0 +1,63 @@
+opening:
+  pity-threshold: 50
+  bulk-limit: 500
+  manual-seconds: 5
+  bulk-pity-rate: 0.5
+  forge-cost: 10
+  forge-divine-cost: 100
+  prestige-multipliers:
+    KRAMPUS: 2.0
+    YETI: 1.5
+    GRINCH: 1.25
+drops:
+  mineira-per-block: 0.001
+  sanguinaria-per-mob: 0.0005
+  tecnologica-per-cycle: 0.0003
+  natureza-per-crop: 0.001
+crates:
+  mineira:
+    name: "§7Caixa Mineira"
+    icon: CHEST
+    rewards:
+      - {weight: 40, rarity: COMMON, kind: money, min: 50000, max: 250000}
+      - {weight: 20, rarity: COMMON, kind: xp, min: 5, max: 20}
+      - {weight: 20, rarity: RARE, kind: item, material: PAPER, display-name: "§aContrato de Mineração", effect: mining_contract, charges: 5000}
+      - {weight: 19, rarity: RARE, kind: item, material: TNT, display-name: "§cCarga Sísmica", effect: seismic_charge, charges: 500}
+      - {weight: 1, rarity: LEGENDARY, kind: item, material: DIAMOND_PICKAXE, display-name: "§6Broca de Auto-Sell", effect: autosell_drill, charges: 10000}
+  sanguinaria:
+    name: "§cCaixa Sanguinária"
+    icon: REDSTONE
+    rewards:
+      - {weight: 45, rarity: COMMON, kind: souls, min: 20, max: 100}
+      - {weight: 25, rarity: COMMON, kind: tokens, min: 100, max: 500}
+      - {weight: 20, rarity: RARE, kind: item, material: PAPER, display-name: "§cCápsula de Abate Instantâneo", effect: kill_capsule, charges: 1000}
+      - {weight: 9, rarity: RARE, kind: item, material: PAPER, display-name: "§dÍman de Almas", effect: soul_magnet, charges: 300}
+      - {weight: 1, rarity: LEGENDARY, kind: item, material: NETHER_STAR, display-name: "§6Talismã do Upgrade Grátis", effect: free_spawner_upgrade, charges: 1}
+  tecnologica:
+    name: "§bCaixa Tecnológica"
+    icon: REDSTONE_BLOCK
+    rewards:
+      - {weight: 45, rarity: COMMON, kind: money, min: 50000, max: 500000}
+      - {weight: 25, rarity: COMMON, kind: tokens, min: 500, max: 5000}
+      - {weight: 20, rarity: RARE, kind: item, material: REDSTONE, display-name: "§bBateria de Cargas", effect: machine_battery, charges: 10000}
+      - {weight: 9, rarity: RARE, kind: item, material: SLIME_BALL, display-name: "§aLubrificante de Engrenagens", effect: machine_lubricant, charges: 50}
+      - {weight: 1, rarity: LEGENDARY, kind: item, material: NETHER_STAR, display-name: "§6Certificado de Overclock", effect: machine_overclock, charges: 86400}
+  natureza:
+    name: "§aCaixa da Natureza"
+    icon: MELON
+    rewards:
+      - {weight: 40, rarity: COMMON, kind: money, min: 50000, max: 300000}
+      - {weight: 20, rarity: COMMON, kind: xp, min: 5, max: 10}
+      - {weight: 14, rarity: RARE, kind: item, material: SUGAR, display-name: "§aFertilizante de Crescimento Súbito", effect: farm_growth, charges: 1}
+      - {weight: 10, rarity: RARE, kind: item, material: GOLD_HOE, display-name: "§6Foice Dourada", effect: golden_scythe, charges: 2500}
+      - {weight: 15, rarity: RARE, kind: item, material: PRISMARINE_SHARD, display-name: "§aFragmento da Natureza"}
+      - {weight: 1, rarity: LEGENDARY, kind: item, material: SAPLING, display-name: "§dSemente Mutante", effect: mutant_seed, charges: 1}
+  divina:
+    name: "§dCaixa Divina"
+    icon: ENCHANTED_BOOK
+    rewards:
+      - {weight: 45, rarity: COMMON, kind: money, min: 1000000, max: 5000000}
+      - {weight: 25, rarity: COMMON, kind: tokens, min: 10000, max: 50000}
+      - {weight: 20, rarity: RARE, kind: souls, min: 100, max: 500}
+      - {weight: 9, rarity: RARE, kind: item, material: PAPER, display-name: "§dSelo da Fortuna Divina", effect: divine_seal, charges: 1}
+      - {weight: 1, rarity: LEGENDARY, kind: item, material: NETHER_STAR, display-name: "§5Orbe do Prestígio Gratuito", effect: free_prestige, charges: 1}
