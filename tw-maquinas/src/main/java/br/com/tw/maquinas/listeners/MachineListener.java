@@ -1,16 +1,11 @@
 package br.com.tw.maquinas.listeners;
 
-import br.com.tw.core.TWCorePlugin;
-import br.com.tw.core.data.TWUser;
-import br.com.tw.core.utils.TWFormat;
-import br.com.tw.economia.TWEconomiaPlugin;
 import br.com.tw.maquinas.TWMaquinasPlugin;
 import br.com.tw.maquinas.managers.MachineManager;
 import br.com.tw.maquinas.menus.MachinePanelMenu;
 import br.com.tw.maquinas.models.MachineType;
 import br.com.tw.maquinas.models.PlacedMachine;
 import org.bukkit.ChatColor;
-import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
@@ -56,14 +51,12 @@ public class MachineListener implements Listener {
         Player player = event.getPlayer();
         Block block = event.getBlockPlaced();
 
-        // 1. Agrupamento (Stacking) se existir máquina idêntica num raio de 3 blocos
         PlacedMachine nearby = manager.findNearbySameMachine(block.getLocation(), player.getUniqueId(), typeId, 3);
         if (nearby != null) {
             event.setCancelled(true);
             nearby.addStack(stackToPlace);
             manager.saveMachineAsync(nearby);
 
-            // Atualiza o holograma da máquina agrupada
             TWMaquinasPlugin.getInstance().getHologramManager().updateOrCreateHologram(nearby, type);
 
             player.setItemInHand(null);
@@ -77,22 +70,18 @@ public class MachineListener implements Listener {
             player.setItemInHand(null);
         }
 
-        // 2. Registo de nova máquina
         PlacedMachine placed = new PlacedMachine(
                 PlacedMachine.toKey(block.getLocation()),
                 player.getUniqueId(),
                 player.getName(),
                 typeId,
                 stackToPlace,
-                1,
-                100L, // Inicia com 100 ciclos de combustível
+                100L,
                 0.0
         );
         manager.registerMachine(placed);
 
-        // Cria o holograma flutuante sobre o bloco
         TWMaquinasPlugin.getInstance().getHologramManager().updateOrCreateHologram(placed, type);
-
         player.playSound(block.getLocation(), Sound.ANVIL_LAND, 0.6f, 1.4f);
         player.sendMessage(ChatColor.GREEN + "Colocaste " + stackToPlace + "x " + type.getDisplayName() + ChatColor.GREEN + "!");
     }
@@ -104,41 +93,16 @@ public class MachineListener implements Listener {
         if (machine == null) return;
 
         event.setCancelled(true);
+
         Player player = event.getPlayer();
-
-        if (!machine.getOwnerUuid().equals(player.getUniqueId()) && !player.hasPermission("tw.admin")) {
-            player.sendMessage(ChatColor.RED + "Não és o proprietário desta máquina!");
-            return;
-        }
-
-        MachineType type = manager.getMachineTypes().get(machine.getTypeId());
-        if (type != null) {
-            // Paga os lucros acumulados pendentes
-            if (machine.getStoredEarnings() > 0) {
-                TWUser user = TWCorePlugin.getInstance().getUserManager().getUser(player.getUniqueId());
-                if (user != null) {
-                    double mult = manager.getPrestigeMultiplier(user.getPrestigeId()) * TWEconomiaPlugin.getInstance().getGlobalBooster();
-                    double payout = machine.getStoredEarnings() * mult;
-                    user.addBalance(payout);
-                    TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
-                    player.sendMessage(ChatColor.GREEN + "Lucro acumulado de $" + TWFormat.formatarDinheiro(payout) + " depositado na tua conta!");
-                }
-            }
-            player.getInventory().addItem(manager.createMachineItem(type, machine.getStackAmount()));
-        }
-
-        // Remove o holograma do ecrã
-        TWMaquinasPlugin.getInstance().getHologramManager().removeHologram(machine.getLocationKey());
-
-        block.setType(Material.AIR);
-        manager.removeMachine(block.getLocation());
-        player.playSound(player.getLocation(), Sound.ITEM_PICKUP, 1f, 1f);
-        player.sendMessage(ChatColor.YELLOW + "Máquina recolhida com sucesso!");
+        player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+        player.sendMessage(ChatColor.RED + "§lAtenção! §cPara recolheres a máquina, clica nela e usa o botão §4'Recolher' §cno menu.");
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onInteract(PlayerInteractEvent event) {
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+
         Block block = event.getClickedBlock();
         if (block == null) return;
 
@@ -149,13 +113,23 @@ public class MachineListener implements Listener {
         Player player = event.getPlayer();
         ItemStack hand = player.getItemInHand();
 
-        // Abastecimento de combustível
         if (hand != null && hand.hasItemMeta() && hand.getItemMeta().hasLore()) {
             List<String> lore = hand.getItemMeta().getLore();
             String lastLine = ChatColor.stripColor(lore.get(lore.size() - 1));
+
             if (lastLine.startsWith("TWFUEL:")) {
-                long units = Long.parseLong(lastLine.split(":")[1]);
-                machine.addFuel(units);
+                if (!machine.getOwnerUuid().equals(player.getUniqueId()) && !player.hasPermission("tw.admin")) {
+                    player.sendMessage(ChatColor.RED + "Apenas o dono pode abastecer esta máquina!");
+                    return;
+                }
+
+                long unitsPerItem = Long.parseLong(lastLine.split(":")[1]);
+
+                // NOVO: Se o jogador estiver no Shift, consome o pack inteiro. Se não, consome só 1.
+                int itemsToConsume = player.isSneaking() ? hand.getAmount() : 1;
+                long totalUnits = unitsPerItem * itemsToConsume;
+
+                machine.addFuel(totalUnits);
                 manager.saveMachineAsync(machine);
 
                 MachineType type = manager.getMachineTypes().get(machine.getTypeId());
@@ -163,23 +137,21 @@ public class MachineListener implements Listener {
                     TWMaquinasPlugin.getInstance().getHologramManager().updateOrCreateHologram(machine, type);
                 }
 
-                if (hand.getAmount() > 1) {
-                    hand.setAmount(hand.getAmount() - 1);
+                if (hand.getAmount() > itemsToConsume) {
+                    hand.setAmount(hand.getAmount() - itemsToConsume);
                 } else {
-                    player.setItemInHand(null);
+                    player.setItemInHand(null); // Gastou o pack todo
                 }
+
                 player.updateInventory();
                 player.playSound(player.getLocation(), Sound.FIZZ, 1f, 1.5f);
-                player.sendMessage(ChatColor.GREEN + "Abasteceste a máquina com +" + units + " ciclos de combustível!");
+                player.sendMessage(ChatColor.GREEN + "Abasteceste a máquina com +" + totalUnits + " ciclos de combustível!");
                 return;
             }
         }
 
-        // Abre o menu de gestão da máquina
         new MachinePanelMenu(player, machine).open();
     }
-
-    // --- PROTEÇÕES FÍSICAS: PISTÕES E EXPLOSÕES ---
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPistonExtend(BlockPistonExtendEvent event) {
@@ -209,7 +181,7 @@ public class MachineListener implements Listener {
     @EventHandler
     public void onChunkLoad(org.bukkit.event.world.ChunkLoadEvent event) {
         for (PlacedMachine m : manager.getPlacedMachines().values()) {
-            Location loc = m.getBukkitLocation();
+            org.bukkit.Location loc = m.getBukkitLocation();
             if (loc != null && loc.getWorld().equals(event.getWorld())) {
                 if ((loc.getBlockX() >> 4) == event.getChunk().getX() && (loc.getBlockZ() >> 4) == event.getChunk().getZ()) {
                     MachineType type = manager.getMachineTypes().get(m.getTypeId());

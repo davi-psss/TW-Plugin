@@ -1,18 +1,24 @@
 package br.com.tw.spawners.managers;
 
+import br.com.tw.core.TWCorePlugin;
+import br.com.tw.core.data.TWUser;
 import br.com.tw.core.utils.TWFormat;
+import br.com.tw.economia.TWEconomiaPlugin;
 import br.com.tw.spawners.TWSpawnersPlugin;
 import br.com.tw.spawners.data.SpawnerRepository;
 import br.com.tw.spawners.models.PlacedSpawner;
 import br.com.tw.spawners.models.SpawnerType;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Effect;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.metadata.FixedMetadataValue;
@@ -27,12 +33,13 @@ public class SpawnerManager {
 
     public static final String META_STACK = "TW_MOB_STACK";
     public static final String META_TYPE = "TW_MOB_TYPE";
+    public static final String META_LOOT = "TW_MOB_LOOT";
+    public static final String META_LOC = "TW_MOB_LOC";
 
     private final TWSpawnersPlugin plugin;
     private final SpawnerRepository repository;
     private final Map<String, SpawnerType> spawnerTypes = new LinkedHashMap<>();
     private final Map<String, PlacedSpawner> placedSpawners = new ConcurrentHashMap<>();
-
     private final List<String> rankHierarchy = Arrays.asList(
             "CARVAO", "NEVE", "SINO", "BISCOITO", "DUENDE", "RENA", "TRENO", "QUEBRANOZES", "ESTRELA", "NOEL", "MAX"
     );
@@ -43,14 +50,12 @@ public class SpawnerManager {
         loadConfigTypes();
         this.placedSpawners.putAll(repository.loadAllSpawners());
         startSpawnerTask();
+        startAutoSellTask();
 
-        // Carrega os hologramas dos spawners existentes 2 segundos após o servidor ligar
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             for (PlacedSpawner s : placedSpawners.values()) {
                 SpawnerType type = spawnerTypes.get(s.getTypeId());
-                if (type != null) {
-                    plugin.getHologramManager().updateOrCreateHologram(s, type);
-                }
+                if (type != null) plugin.getHologramManager().updateOrCreateHologram(s, type);
             }
         }, 40L);
     }
@@ -59,7 +64,6 @@ public class SpawnerManager {
         spawnerTypes.clear();
         ConfigurationSection sec = plugin.getConfig().getConfigurationSection("spawners");
         if (sec == null) return;
-
         for (String key : sec.getKeys(false)) {
             String name = sec.getString(key + ".nome", "&eGerador");
             EntityType entityType = EntityType.valueOf(sec.getString(key + ".entidade", "PIG").toUpperCase());
@@ -67,7 +71,6 @@ public class SpawnerManager {
             double cost = sec.getDouble(key + ".custo-compra", 100000.0);
             double valKill = sec.getDouble(key + ".valor-por-kill", 500.0);
             double tokenChance = sec.getDouble(key + ".chance-token", 0.15);
-
             spawnerTypes.put(key.toUpperCase(), new SpawnerType(key, name, entityType, reqRank, cost, valKill, tokenChance));
         }
     }
@@ -76,58 +79,125 @@ public class SpawnerManager {
         new BukkitRunnable() {
             @Override
             public void run() {
-                for (PlacedSpawner spawner : placedSpawners.values()) {
-                    Location loc = spawner.getBukkitLocation();
-                    if (loc == null || !loc.getWorld().isChunkLoaded(loc.getBlockX() >> 4, loc.getBlockZ() >> 4)) {
-                        continue;
-                    }
+                long nowSec = System.currentTimeMillis() / 1000L;
 
+                for (PlacedSpawner spawner : placedSpawners.values()) {
                     SpawnerType type = spawnerTypes.get(spawner.getTypeId());
                     if (type == null) continue;
 
-                    // Garante que o holograma acima do bloco do spawner está ativo
-                    plugin.getHologramManager().updateOrCreateHologram(spawner, type);
+                    Location loc = spawner.getBukkitLocation();
+                    if (loc == null || !loc.getWorld().isChunkLoaded(loc.getBlockX() >> 4, loc.getBlockZ() >> 4)) continue;
 
-                    boolean playerNear = false;
-                    for (Entity e : loc.getWorld().getNearbyEntities(loc, 16, 16, 16)) {
-                        if (e.getType() == EntityType.PLAYER) {
-                            playerNear = true;
-                            break;
+                    double currentBooster = spawner.hasActiveBooster() ? spawner.getBoosterMultiplier() : 1.0;
+                    double baseCycle = 10.0 - ((spawner.getSpeedLevel() - 1) * 0.5);
+                    double realCycleSeconds = Math.max(1.0, baseCycle / currentBooster);
+
+                    if (nowSec - spawner.getLastSpawnTime() >= realCycleSeconds) {
+                        spawner.setLastSpawnTime(nowSec);
+                        long spawnAmount = spawner.getStackAmount() * spawner.getAmountLevel();
+
+                        if (spawner.isVirtualMode()) {
+                            double lootBonus = 1.0 + ((spawner.getLootLevel() - 1) * 0.10);
+                            double moneyGenerated = type.getValuePerKill() * spawnAmount * lootBonus * currentBooster;
+
+                            long tokensGenerated = 0;
+                            long soulsGenerated = 0;
+                            long xpGenerated = (long) (spawnAmount * 2 * currentBooster);
+
+                            double tokenChanceBase = type.getTokenChance() * (1.0 + ((spawner.getLootLevel() - 1) * 0.05)) * currentBooster;
+                            double soulChanceBase = 0.001 * currentBooster;
+
+                            for (int i = 0; i < spawnAmount; i++) {
+                                if (Math.random() < tokenChanceBase) tokensGenerated++;
+                                if (Math.random() < soulChanceBase) soulsGenerated++;
+                            }
+
+                            spawner.addStoredMoney(moneyGenerated);
+                            spawner.addStoredTokens(tokensGenerated);
+                            spawner.addStoredXp(xpGenerated);
+                            spawner.addStoredSouls(soulsGenerated);
+                            spawner.addTotalKills(spawnAmount);
+
+                            playVirtualEffects(loc, type);
+                        } else {
+                            boolean playerNear = false;
+                            for (Entity e : loc.getWorld().getNearbyEntities(loc, 16, 16, 16)) {
+                                if (e instanceof Player) { playerNear = true; break; }
+                            }
+                            if (playerNear) {
+                                spawnOrStackEntity(loc, type, spawnAmount, spawner.getLootLevel());
+                                spawner.addTotalKills(spawnAmount);
+                            }
                         }
                     }
-                    if (!playerNear) continue;
-
-                    spawnOrStackEntity(loc, type, spawner.getStackAmount());
+                    plugin.getHologramManager().updateOrCreateHologram(spawner, type);
                 }
             }
-        }.runTaskTimer(plugin, 100L, 100L);
+        }.runTaskTimer(plugin, 20L, 20L);
+
+        new BukkitRunnable() {
+            @Override
+            public void run() { saveAllSync(); }
+        }.runTaskTimerAsynchronously(plugin, 72000L, 72000L);
     }
 
-    public void spawnOrStackEntity(Location spawnerLoc, SpawnerType type, long amountToAdd) {
-        Location spawnPoint = spawnerLoc.clone().add(0.5, 1.0, 0.5);
+    private void startAutoSellTask() {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                for (PlacedSpawner spawner : placedSpawners.values()) {
+                    if (spawner.isVirtualMode() && spawner.isAutoSell() && (spawner.getStoredMoney() > 0 || spawner.getStoredTokens() > 0)) {
+                        Player p = Bukkit.getPlayer(spawner.getOwnerUuid());
+                        if (p != null && p.isOnline()) {
+                            TWUser user = TWCorePlugin.getInstance().getUserManager().getUser(p.getUniqueId());
+                            if (user != null) {
+                                double prestigeMult = getPrestigeMultiplier(user.getPrestigeId());
+                                double globalBooster = TWEconomiaPlugin.getInstance().getGlobalBooster();
 
+                                user.addBalance(spawner.getStoredMoney() * prestigeMult * globalBooster);
+                                user.addTokens(spawner.getStoredTokens());
+
+                                spawner.setStoredMoney(0);
+                                spawner.setStoredTokens(0);
+                            }
+                        }
+                    }
+                }
+            }
+        }.runTaskTimer(plugin, 200L, 200L);
+    }
+
+    private void playVirtualEffects(Location loc, SpawnerType type) {
+        Location center = loc.clone().add(0.5, 1.0, 0.5);
+        loc.getWorld().playEffect(center, Effect.LAVA_POP, 0);
+        loc.getWorld().playSound(center, Sound.ORB_PICKUP, 0.05f, 1.5f);
+    }
+
+    public void spawnOrStackEntity(Location spawnerLoc, SpawnerType type, long amountToAdd, int lootLevel) {
+        Location spawnPoint = spawnerLoc.clone().add(1.5, 0.0, 0.5);
         for (Entity nearby : spawnPoint.getWorld().getNearbyEntities(spawnPoint, 6, 4, 6)) {
             if (nearby instanceof LivingEntity && nearby.getType() == type.getEntityType() && !nearby.isDead()) {
                 if (nearby.hasMetadata(META_STACK)) {
                     long currentStack = nearby.getMetadata(META_STACK).get(0).asLong();
-                    long newStack = currentStack + amountToAdd;
-                    updateEntityStack((LivingEntity) nearby, type, newStack);
+                    updateEntityStack((LivingEntity) nearby, type, currentStack + amountToAdd, lootLevel, spawnPoint);
                     return;
                 }
             }
         }
-
         LivingEntity entity = (LivingEntity) spawnPoint.getWorld().spawnEntity(spawnPoint, type.getEntityType());
         entity.setRemoveWhenFarAway(true);
         entity.setCanPickupItems(false);
-        entity.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, Integer.MAX_VALUE, 100, false, false));
-        updateEntityStack(entity, type, amountToAdd);
+        entity.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, Integer.MAX_VALUE, 250, false, false));
+        entity.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, Integer.MAX_VALUE, 250, false, false));
+        updateEntityStack(entity, type, amountToAdd, lootLevel, spawnPoint);
     }
 
-    public void updateEntityStack(LivingEntity entity, SpawnerType type, long stack) {
+    public void updateEntityStack(LivingEntity entity, SpawnerType type, long stack, int lootLevel, Location anchor) {
         entity.setMetadata(META_STACK, new FixedMetadataValue(plugin, stack));
         entity.setMetadata(META_TYPE, new FixedMetadataValue(plugin, type.getId()));
-        entity.setCustomName(ChatColor.YELLOW + "" + ChatColor.BOLD + stack + "x " + type.getDisplayName());
+        entity.setMetadata(META_LOOT, new FixedMetadataValue(plugin, lootLevel));
+        entity.setMetadata(META_LOC, new FixedMetadataValue(plugin, anchor));
+        entity.setCustomName(ChatColor.YELLOW + "§l" + stack + "x " + type.getDisplayName());
         entity.setCustomNameVisible(true);
     }
 
@@ -148,25 +218,83 @@ public class SpawnerManager {
         }
     }
 
+    // =========================================================================
+    // MÉTODOS DE CRIAÇÃO DO ITEM DE SPAWNER (COM OVERLOADS PARA EVITAR ERROS)
+    // =========================================================================
+
+    // Método original (usado pelas compras na loja e /spawners - spawners virgens nível 1)
     public ItemStack createSpawnerItem(SpawnerType type, long amount) {
+        return createSpawnerItem(type, amount, 1, 1, 1, false);
+    }
+
+    // Método que salva o Spawner atual (usado ao Desmontar)
+    public ItemStack createSpawnerItem(PlacedSpawner spawner, SpawnerType type) {
+        return createSpawnerItem(type, spawner.getStackAmount(), spawner.getSpeedLevel(), spawner.getLootLevel(), spawner.getAmountLevel(), spawner.isAutoSell());
+    }
+
+    // O gerador real de Itens com os dados ocultos
+    private ItemStack createSpawnerItem(SpawnerType type, long amount, int speed, int loot, int amtLvl, boolean autoSell) {
         ItemStack item = new ItemStack(Material.MOB_SPAWNER, 1);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(type.getDisplayName());
+
+        List<String> lore = new ArrayList<>();
+        lore.add("§7Entidade: §f" + type.getEntityType().name());
+        lore.add("§7Quantia (Stack): §e" + amount + "x");
+        lore.add("§7Base por Abate: §a$" + TWFormat.formatarDinheiro(type.getValuePerKill()));
+        lore.add("");
+
+        if (speed > 1 || loot > 1 || amtLvl > 1 || autoSell) {
+            lore.add("§d§lUpgrades Salvos:");
+            if (speed > 1) lore.add("§7 ➥ Velocidade: §aLv." + speed);
+            if (loot > 1) lore.add("§7 ➥ Fortuna: §aLv." + loot);
+            if (amtLvl > 1) lore.add("§7 ➥ Quantidade: §aLv." + amtLvl);
+            if (autoSell) lore.add("§7 ➥ Auto-Sell: §aAtivo");
+            lore.add("");
+        }
+
+        lore.add("§eColoca no teu terreno para gerar mobs!");
+        lore.add("§0TWSPAWNER:" + type.getId() + ":" + amount + ":" + speed + ":" + loot + ":" + amtLvl + ":" + autoSell);
+
+        meta.setLore(lore);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    public ItemStack createBoosterItem(double multiplier, int minutes) {
+        ItemStack item = new ItemStack(Material.NETHER_STAR, 1);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName("§b§lBooster de Spawner §7(" + multiplier + "x)");
         meta.setLore(Arrays.asList(
-                ChatColor.GRAY + "Entidade: " + ChatColor.WHITE + type.getEntityType().name(),
-                ChatColor.GRAY + "Quantia (Stack): " + ChatColor.YELLOW + amount + "x",
-                ChatColor.GRAY + "Recompensa por Abate: " + ChatColor.GREEN + "$" + TWFormat.formatarDinheiro(type.getValuePerKill()),
+                "§7Acelera o tempo de geração e",
+                "§7multiplica os lucros de um",
+                "§7gerador específico.",
                 "",
-                ChatColor.YELLOW + "Coloca no teu terreno para gerar mobs!",
-                ChatColor.BLACK + "TWSPAWNER:" + type.getId() + ":" + amount
+                "§7Duração: §f" + minutes + " minutos",
+                "",
+                "§eClica com o botão direito num Spawner!",
+                "§0TWBOOSTER:" + multiplier + ":" + minutes
         ));
         item.setItemMeta(meta);
         return item;
     }
 
-    public PlacedSpawner getSpawnerAt(Location loc) {
-        return placedSpawners.get(PlacedSpawner.toKey(loc));
+    public ItemStack createSoulItem(long amount) {
+        ItemStack item = new ItemStack(Material.NETHER_STAR, 1);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName("§d§lAlma de Monstro");
+        meta.setLore(Arrays.asList(
+                "§7Uma essência raríssima dropada",
+                "§7pelos monstros nos spawners.",
+                "§7Usa-a para trocar por itens místicos!",
+                "",
+                "§7Quantia: §f" + amount + "x"
+        ));
+        item.setItemMeta(meta);
+        return item;
     }
+
+    public PlacedSpawner getSpawnerAt(Location loc) { return placedSpawners.get(PlacedSpawner.toKey(loc)); }
 
     public PlacedSpawner findNearbySameSpawner(Location center, UUID owner, String typeId, int radius) {
         for (int x = -radius; x <= radius; x++) {
@@ -203,11 +331,6 @@ public class SpawnerManager {
         }
     }
 
-    public Map<String, SpawnerType> getSpawnerTypes() {
-        return spawnerTypes;
-    }
-
-    public Map<String, PlacedSpawner> getPlacedSpawners() {
-        return placedSpawners;
-    }
+    public Map<String, SpawnerType> getSpawnerTypes() { return spawnerTypes; }
+    public Map<String, PlacedSpawner> getPlacedSpawners() { return placedSpawners; }
 }

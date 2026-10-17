@@ -37,3 +37,21 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+### Arquivos Compilados e Binários ###
+*.jar
+*.war
+*.ear
+*.class
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+### Logs e Arquivos do SO ###
+*.log
+.DS_Store
+Thumbs.db

@@ -30,11 +30,34 @@ public class HologramManager {
 
         List<String> lines = new ArrayList<>();
         lines.add(type.getDisplayName());
-        lines.add("§7Stack: §e" + machine.getStackAmount() + "x §8| §7Nível: §a" + machine.getLevel());
-        lines.add("§7Armazenado: §2$" + TWFormat.formatarDinheiro(machine.getStoredEarnings()));
+
+        lines.add("§7Stack: §e" + machine.getStackAmount() + "x §8| §7Vel: §aLv." + machine.getSpeedLevel());
+
+        long nowSec = System.currentTimeMillis() / 1000L;
+        double realCycleSeconds = Math.max(1.0, type.getCycleSeconds() - ((machine.getSpeedLevel() - 1) * 0.5));
+        double percent = Math.min(1.0, (nowSec - machine.getLastTickEpochSeconds()) / realCycleSeconds);
+
+        int bars = (int) (percent * 10);
+        StringBuilder progress = new StringBuilder("§a");
+        for (int i = 0; i < 10; i++) {
+            if (i == bars) progress.append("§7");
+            progress.append("■");
+        }
+        lines.add("§7Progresso: " + progress.toString());
+
+        double maxStorage = (type.getValuePerCycle() * machine.getStackAmount()) * (10 * machine.getStorageLevel());
+        lines.add("§7Armazenado: §2$" + TWFormat.formatarDinheiro(machine.getStoredEarnings()) + " §8/ §a$" + TWFormat.formatarDinheiro(maxStorage));
+
+        if (machine.getTotalGenerated() > 0) {
+            lines.add("§7Total Histórico: §6$" + TWFormat.formatarDinheiro(machine.getTotalGenerated()));
+        }
 
         if (machine.getFuel() <= 0) {
             lines.add("§c§lSEM COMBUSTÍVEL!");
+        } else if (machine.getStoredEarnings() >= maxStorage) {
+            lines.add("§c§lARMAZÉM CHEIO! RECOLHE OS LUCROS!");
+        } else {
+            lines.add("§7Combustível: §e" + machine.getFuel() + " ciclos");
         }
 
         List<ArmorStand> stands = holograms.get(machine.getLocationKey());
@@ -43,8 +66,6 @@ public class HologramManager {
             removeHologram(machine.getLocationKey());
             stands = new ArrayList<>();
 
-            // Na 1.8.8, com marker(true), o texto renderiza na base da entidade.
-            // Somamos 1.0 (altura do bloco) + 0.3 por linha para ficar claramente visível no topo:
             double yOffset = 1.0 + (lines.size() * 0.28);
             for (String text : lines) {
                 Location lineLoc = loc.clone().add(0.5, yOffset, 0.5);
@@ -67,8 +88,7 @@ public class HologramManager {
         stand.setCanPickupItems(false);
         stand.setCustomName(text);
         stand.setCustomNameVisible(true);
-        stand.setMarker(true); // Impede colisões e cliques
-        // Removemos stand.setSmall(true) para manter a escala padronizada de nametag no 1.8.8
+        stand.setMarker(true);
     }
 
     public void removeHologram(String locKey) {

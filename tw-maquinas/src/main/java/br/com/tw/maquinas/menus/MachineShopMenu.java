@@ -33,12 +33,16 @@ public class MachineShopMenu implements TWMenu {
         this.player = player;
         this.user = TWCorePlugin.getInstance().getUserManager().getUser(player.getUniqueId());
         this.manager = TWMaquinasPlugin.getInstance().getMachineManager();
-        this.inventory = Bukkit.createInventory(this, 45, ChatColor.DARK_GRAY + "Loja de Máquinas");
+        this.inventory = Bukkit.createInventory(this, 54, ChatColor.DARK_GRAY + "Loja de Máquinas");
         setupItems();
     }
 
     private void setupItems() {
-        int[] slots = {10, 11, 12, 13, 14, 15, 16};
+        for (int i = 0; i < 54; i++) {
+            inventory.setItem(i, createGlass(15));
+        }
+
+        int[] slots = {10, 11, 12, 13, 14, 15, 16, 19, 20, 21};
         int idx = 0;
 
         for (MachineType type : manager.getMachineTypes().values()) {
@@ -51,31 +55,51 @@ public class MachineShopMenu implements TWMenu {
             ItemMeta meta = item.getItemMeta();
             meta.setDisplayName(type.getDisplayName());
             meta.setLore(Arrays.asList(
-                    ChatColor.GRAY + "Rank Necessário: " + ChatColor.WHITE + type.getRequiredRank(),
-                    ChatColor.GRAY + "Preço (1x): " + ChatColor.GREEN + "$" + TWFormat.formatarDinheiro(type.getBuyCost()),
-                    ChatColor.GRAY + "Geração: " + ChatColor.AQUA + "$" + TWFormat.formatarDinheiro(type.getValuePerCycle()) + " a cada " + type.getCycleSeconds() + "s",
+                    "§7Rank Necessário: §f" + type.getRequiredRank(),
+                    "§7Preço Base (1x): §a$" + TWFormat.formatarDinheiro(type.getBuyCost()),
+                    "§7Geração: §b$" + TWFormat.formatarDinheiro(type.getValuePerCycle()) + " a cada " + type.getCycleSeconds() + "s",
                     "",
-                    unlocked ? ChatColor.YELLOW + "Botão Esquerdo: Comprar 1x" : ChatColor.RED + "Rank insuficiente!",
-                    unlocked ? ChatColor.GOLD + "Botão Direito: Comprar 10x" : ""
+                    unlocked ? "§eBotão Esquerdo: §7Comprar 1x" : "§c§lRANK INSUFICIENTE",
+                    unlocked ? "§6Botão Direito: §7Comprar 10x" : "",
+                    unlocked ? "§bShift + Clique: §7Comprar MAX" : ""
             ));
             item.setItemMeta(meta);
             inventory.setItem(slot, item);
         }
 
-        // Botão de Comprar Combustível
-        double fuelCost = TWMaquinasPlugin.getInstance().getConfig().getDouble("combustivel.preco-money", 5000.0);
-        int fuelUnits = TWMaquinasPlugin.getInstance().getConfig().getInt("combustivel.unidades-por-compra", 100);
-        ItemStack fuelBtn = new ItemStack(Material.COAL, 1, (short) 1);
-        ItemMeta fMeta = fuelBtn.getItemMeta();
-        fMeta.setDisplayName(ChatColor.GOLD + "" + ChatColor.BOLD + "Comprar Combustível");
-        fMeta.setLore(Arrays.asList(
-                ChatColor.GRAY + "Unidades: " + ChatColor.AQUA + fuelUnits + " cargas",
-                ChatColor.GRAY + "Preço: " + ChatColor.GREEN + "$" + TWFormat.formatarDinheiro(fuelCost),
+        double baseFuelPrice = TWMaquinasPlugin.getInstance().getConfig().getDouble("combustivel.preco-money", 5000.0);
+        inventory.setItem(38, createFuelButton("§eCombustível Pequeno", 100, baseFuelPrice));
+        inventory.setItem(40, createFuelButton("§6Combustível Médio", 1000, baseFuelPrice * 10));
+        inventory.setItem(42, createFuelButton("§cCombustível Grande", 10000, baseFuelPrice * 100));
+
+        ItemStack info = new ItemStack(Material.BOOK);
+        ItemMeta iMeta = info.getItemMeta();
+        iMeta.setDisplayName("§a§lDica de Abastecimento");
+        iMeta.setLore(Arrays.asList("§7Segura §eSHIFT §7e clica com o combustível", "§7na máquina para colocar tudo de uma vez!"));
+        info.setItemMeta(iMeta);
+        inventory.setItem(49, info);
+    }
+
+    private ItemStack createFuelButton(String name, int units, double price) {
+        ItemStack item = new ItemStack(Material.COAL, 1, (short) 1);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(name);
+        meta.setLore(Arrays.asList(
+                "§7Unidades: §b" + units + " ciclos",
+                "§7Preço: §a$" + TWFormat.formatarDinheiro(price),
                 "",
-                ChatColor.YELLOW + "Clica para adquirir!"
+                "§eClica para adquirir!"
         ));
-        fuelBtn.setItemMeta(fMeta);
-        inventory.setItem(31, fuelBtn);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private ItemStack createGlass(int color) {
+        ItemStack glass = new ItemStack(Material.STAINED_GLASS_PANE, 1, (short) color);
+        ItemMeta meta = glass.getItemMeta();
+        meta.setDisplayName(" ");
+        glass.setItemMeta(meta);
+        return glass;
     }
 
     @Override
@@ -83,20 +107,10 @@ public class MachineShopMenu implements TWMenu {
         if (user == null) return;
         int slot = event.getSlot();
 
-        if (slot == 31) {
-            double fuelCost = TWMaquinasPlugin.getInstance().getConfig().getDouble("combustivel.preco-money", 5000.0);
-            int fuelUnits = TWMaquinasPlugin.getInstance().getConfig().getInt("combustivel.unidades-por-compra", 100);
-            if (user.removeBalance(fuelCost)) {
-                TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
-                player.getInventory().addItem(manager.createFuelItem(fuelUnits));
-                player.playSound(player.getLocation(), Sound.ORB_PICKUP, 1f, 1.2f);
-                player.sendMessage(ChatColor.GREEN + "Compraste " + fuelUnits + "x unidades de Combustível!");
-            } else {
-                player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
-                player.sendMessage(ChatColor.RED + "Não tens saldo suficiente!");
-            }
-            return;
-        }
+        double baseFuelPrice = TWMaquinasPlugin.getInstance().getConfig().getDouble("combustivel.preco-money", 5000.0);
+        if (slot == 38) buyFuel(100, baseFuelPrice);
+        if (slot == 40) buyFuel(1000, baseFuelPrice * 10);
+        if (slot == 42) buyFuel(10000, baseFuelPrice * 100);
 
         MachineType type = slotMap.get(slot);
         if (type != null) {
@@ -106,9 +120,22 @@ public class MachineShopMenu implements TWMenu {
                 return;
             }
 
-            long amount = event.isRightClick() ? 10 : 1;
-            double totalCost = type.getBuyCost() * amount;
+            long amount = 1;
+            if (event.isShiftClick()) {
+                amount = (long) Math.floor(user.getBalance() / type.getBuyCost());
+                if (amount > 64) amount = 64;
+                if (amount <= 0) amount = 1;
+            } else if (event.isRightClick()) {
+                amount = 10;
+            }
 
+            if (player.getInventory().firstEmpty() == -1) {
+                player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+                player.sendMessage(ChatColor.RED + "O teu inventário está cheio!");
+                return;
+            }
+
+            double totalCost = type.getBuyCost() * amount;
             if (user.removeBalance(totalCost)) {
                 TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
                 player.getInventory().addItem(manager.createMachineItem(type, amount));
@@ -116,8 +143,25 @@ public class MachineShopMenu implements TWMenu {
                 player.sendMessage(ChatColor.GREEN + "Compraste " + amount + "x " + type.getDisplayName() + ChatColor.GREEN + " por $" + TWFormat.formatarDinheiro(totalCost) + "!");
             } else {
                 player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
-                player.sendMessage(ChatColor.RED + "Faltam $" + TWFormat.formatarDinheiro(totalCost - user.getBalance()) + " para esta compra.");
+                player.sendMessage(ChatColor.RED + "Faltam $" + TWFormat.formatarDinheiro(totalCost - user.getBalance()) + " para comprar " + amount + "x unidades.");
             }
+        }
+    }
+
+    private void buyFuel(int units, double price) {
+        if (player.getInventory().firstEmpty() == -1) {
+            player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+            player.sendMessage(ChatColor.RED + "O teu inventário está cheio!");
+            return;
+        }
+        if (user.removeBalance(price)) {
+            TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
+            player.getInventory().addItem(manager.createFuelItem(units));
+            player.playSound(player.getLocation(), Sound.ORB_PICKUP, 1f, 1.2f);
+            player.sendMessage(ChatColor.GREEN + "Compraste " + units + "x ciclos de Combustível!");
+        } else {
+            player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+            player.sendMessage(ChatColor.RED + "Não tens saldo suficiente!");
         }
     }
 

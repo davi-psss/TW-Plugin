@@ -38,6 +38,7 @@ public class TWRankExpansion extends PlaceholderExpansion {
 
         if (identifier.equalsIgnoreCase("rank")) {
             String rankId = user.getRankId();
+            if (rankId == null) return "CARVAO"; // Fallback de segurança
             String prefix = TWRanksPlugin.getInstance().getRanksConfig().getString("ranks." + rankId + ".prefix");
             return prefix != null ? ChatColor.translateAlternateColorCodes('&', prefix) : rankId;
         }

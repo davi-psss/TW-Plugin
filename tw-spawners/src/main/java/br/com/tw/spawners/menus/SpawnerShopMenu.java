@@ -5,6 +5,7 @@ import br.com.tw.core.data.TWUser;
 import br.com.tw.core.menus.TWMenu;
 import br.com.tw.core.utils.TWFormat;
 import br.com.tw.spawners.TWSpawnersPlugin;
+import br.com.tw.spawners.listeners.SpawnerListener;
 import br.com.tw.spawners.managers.SpawnerManager;
 import br.com.tw.spawners.models.SpawnerType;
 import org.bukkit.Bukkit;
@@ -33,11 +34,15 @@ public class SpawnerShopMenu implements TWMenu {
         this.player = player;
         this.user = TWCorePlugin.getInstance().getUserManager().getUser(player.getUniqueId());
         this.manager = TWSpawnersPlugin.getInstance().getSpawnerManager();
-        this.inventory = Bukkit.createInventory(this, 36, ChatColor.DARK_GRAY + "Loja de Spawners");
+        this.inventory = Bukkit.createInventory(this, 54, ChatColor.DARK_GRAY + "Loja de Geradores");
         setupItems();
     }
 
     private void setupItems() {
+        for (int i = 0; i < 54; i++) {
+            inventory.setItem(i, createGlass(15));
+        }
+
         int[] slots = {10, 11, 12, 13, 14, 15, 16};
         int idx = 0;
 
@@ -51,41 +56,103 @@ public class SpawnerShopMenu implements TWMenu {
             ItemMeta meta = item.getItemMeta();
             meta.setDisplayName(type.getDisplayName());
             meta.setLore(Arrays.asList(
-                    ChatColor.GRAY + "Rank Necessário: " + ChatColor.WHITE + type.getRequiredRank(),
-                    ChatColor.GRAY + "Preço (1x): " + ChatColor.GREEN + "$" + TWFormat.formatarDinheiro(type.getBuyCost()),
-                    ChatColor.GRAY + "Recompensa/Abate: " + ChatColor.AQUA + "$" + TWFormat.formatarDinheiro(type.getValuePerKill()),
+                    "§7Rank Necessário: §f" + type.getRequiredRank(),
+                    "§7Preço Base: §a$" + TWFormat.formatarDinheiro(type.getBuyCost()),
                     "",
-                    unlocked ? ChatColor.YELLOW + "Botão Esquerdo: Comprar 1x" : ChatColor.RED + "Rank insuficiente!",
-                    unlocked ? ChatColor.GOLD + "Botão Direito: Comprar 10x" : ""
+                    unlocked ? "§aBotão Esquerdo: §7Comprar 1x" : "§c§lRANK INSUFICIENTE",
+                    unlocked ? "§eBotão Direito: §7Digitar Quantidade" : ""
             ));
             item.setItemMeta(meta);
             inventory.setItem(slot, item);
         }
+
+        // Boosters na Loja
+        inventory.setItem(38, createBoosterButton("§bBooster Menor §7(1.5x)", 1.5, 30, 250000.0));
+        inventory.setItem(40, createBoosterButton("§aBooster Médio §7(2.0x)", 2.0, 60, 1000000.0));
+        inventory.setItem(42, createBoosterButton("§dBooster Divino §7(3.0x)", 3.0, 60, 5000000.0));
+    }
+
+    private ItemStack createBoosterButton(String name, double mult, int mins, double price) {
+        ItemStack item = new ItemStack(Material.NETHER_STAR, 1);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(name);
+        meta.setLore(Arrays.asList(
+                "§7Acelera um Spawner específico",
+                "§7e aumenta os ganhos em §f" + mult + "x§7.",
+                "§7Duração: §f" + mins + " Minutos",
+                "",
+                "§7Preço: §a$" + TWFormat.formatarDinheiro(price),
+                "§eClica para comprar!"
+        ));
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private ItemStack createGlass(int color) {
+        ItemStack glass = new ItemStack(Material.STAINED_GLASS_PANE, 1, (short) color);
+        ItemMeta meta = glass.getItemMeta();
+        meta.setDisplayName(" ");
+        glass.setItemMeta(meta);
+        return glass;
     }
 
     @Override
     public void onClick(InventoryClickEvent event) {
         if (user == null) return;
-        SpawnerType type = slotMap.get(event.getSlot());
-        if (type == null) return;
+        int slot = event.getSlot();
 
-        if (!manager.hasRequiredRank(user.getRankId(), user.getPrestigeId(), type.getRequiredRank())) {
+        if (slot == 38) buyBooster(1.5, 30, 250000.0);
+        if (slot == 40) buyBooster(2.0, 60, 1000000.0);
+        if (slot == 42) buyBooster(3.0, 60, 5000000.0);
+
+        SpawnerType type = slotMap.get(slot);
+        if (type != null) {
+            if (!manager.hasRequiredRank(user.getRankId(), user.getPrestigeId(), type.getRequiredRank())) {
+                player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+                player.sendMessage(ChatColor.RED + "Precisas do rank " + type.getRequiredRank() + " para comprar isto!");
+                return;
+            }
+
+            if (event.isRightClick()) {
+                player.closeInventory();
+                SpawnerListener.pendingPurchases.put(player.getUniqueId(), type);
+                player.sendMessage("§eEscreve no chat a quantidade de §f" + type.getDisplayName() + " §eque desejas comprar (ou 'cancelar' para sair).");
+                return;
+            }
+
+            if (player.getInventory().firstEmpty() == -1) {
+                player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+                player.sendMessage(ChatColor.RED + "O teu inventário está cheio!");
+                return;
+            }
+
+            double totalCost = type.getBuyCost() * 1;
+            if (user.removeBalance(totalCost)) {
+                TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
+                player.getInventory().addItem(manager.createSpawnerItem(type, 1));
+                player.playSound(player.getLocation(), Sound.LEVEL_UP, 1f, 1.5f);
+                player.sendMessage(ChatColor.GREEN + "Compraste 1x " + type.getDisplayName() + ChatColor.GREEN + "!");
+            } else {
+                player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+                player.sendMessage(ChatColor.RED + "Faltam $" + TWFormat.formatarDinheiro(totalCost - user.getBalance()) + ".");
+            }
+        }
+    }
+
+    private void buyBooster(double mult, int mins, double price) {
+        if (player.getInventory().firstEmpty() == -1) {
             player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
-            player.sendMessage(ChatColor.RED + "Precisas do rank " + type.getRequiredRank() + " para comprar este gerador!");
+            player.sendMessage(ChatColor.RED + "Inventário cheio!");
             return;
         }
-
-        long amount = event.isRightClick() ? 10 : 1;
-        double totalCost = type.getBuyCost() * amount;
-
-        if (user.removeBalance(totalCost)) {
+        if (user.removeBalance(price)) {
             TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
-            player.getInventory().addItem(manager.createSpawnerItem(type, amount));
-            player.playSound(player.getLocation(), Sound.LEVEL_UP, 1f, 1.5f);
-            player.sendMessage(ChatColor.GREEN + "Compraste " + amount + "x " + type.getDisplayName() + ChatColor.GREEN + " por $" + TWFormat.formatarDinheiro(totalCost) + "!");
+            player.getInventory().addItem(manager.createBoosterItem(mult, mins));
+            player.playSound(player.getLocation(), Sound.ORB_PICKUP, 1f, 1.2f);
+            player.sendMessage(ChatColor.GREEN + "Booster comprado com sucesso!");
         } else {
             player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
-            player.sendMessage(ChatColor.RED + "Faltam $" + TWFormat.formatarDinheiro(totalCost - user.getBalance()) + " para esta compra.");
+            player.sendMessage(ChatColor.RED + "Saldo insuficiente!");
         }
     }
 

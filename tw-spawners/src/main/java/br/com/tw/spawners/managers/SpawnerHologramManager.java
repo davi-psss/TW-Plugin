@@ -1,5 +1,6 @@
 package br.com.tw.spawners.managers;
 
+import br.com.tw.core.utils.TWFormat;
 import br.com.tw.spawners.TWSpawnersPlugin;
 import br.com.tw.spawners.models.PlacedSpawner;
 import br.com.tw.spawners.models.SpawnerType;
@@ -29,8 +30,37 @@ public class SpawnerHologramManager {
 
         List<String> lines = new ArrayList<>();
         lines.add(type.getDisplayName());
-        lines.add("§7Quantia: §e" + spawner.getStackAmount() + "x");
-        lines.add("§7Dono: §f" + spawner.getOwnerName());
+
+        String modeString = spawner.isVirtualMode() ? (spawner.isAutoSell() ? "§b[AUTO-SELL]" : "§d[VIRTUAL]") : "§e[FÍSICO]";
+        lines.add("§7Stack: §e" + spawner.getStackAmount() + "x §8| " + modeString);
+
+        if (spawner.hasActiveBooster()) {
+            lines.add("§b🔥 BOOSTER ATIVO (" + spawner.getBoosterMultiplier() + "x) 🔥");
+        }
+
+        long nowSec = System.currentTimeMillis() / 1000L;
+        double currentBooster = spawner.hasActiveBooster() ? spawner.getBoosterMultiplier() : 1.0;
+        double realCycleSeconds = Math.max(1.0, (10.0 - ((spawner.getSpeedLevel() - 1) * 0.5)) / currentBooster);
+        double percent = Math.min(1.0, (nowSec - spawner.getLastSpawnTime()) / realCycleSeconds);
+
+        int bars = (int) (percent * 10);
+        StringBuilder progress = new StringBuilder("§a");
+        for (int i = 0; i < 10; i++) {
+            if (i == bars) progress.append("§7");
+            progress.append("■");
+        }
+        lines.add("§7Progresso: " + progress.toString());
+
+        if (spawner.isVirtualMode()) {
+            lines.add("§7Cofre: §2$" + TWFormat.formatarDinheiro(spawner.getStoredMoney()) + " §8| §b" + TWFormat.formatarDinheiro(spawner.getStoredTokens()) + " T");
+            if (spawner.getStoredXp() > 0 || spawner.getStoredSouls() > 0) {
+                lines.add("§7Oculto: §a" + TWFormat.formatarDinheiro(spawner.getStoredXp()) + " XP §8| §d" + spawner.getStoredSouls() + " Almas");
+            }
+        }
+
+        if (spawner.getTotalKills() > 0) {
+            lines.add("§7Abates Totais: §c" + TWFormat.formatarDinheiro(spawner.getTotalKills()));
+        }
 
         List<ArmorStand> stands = holograms.get(spawner.getLocationKey());
 
@@ -38,8 +68,7 @@ public class SpawnerHologramManager {
             removeHologram(spawner.getLocationKey());
             stands = new ArrayList<>();
 
-            // Ajuste de altura para a 1.8.8: o texto do ArmorStand com marker fica acima do bloco de ferro
-            double yOffset = 1.1 + (lines.size() * 0.28);
+            double yOffset = 1.0 + (lines.size() * 0.28);
             for (String text : lines) {
                 Location lineLoc = loc.clone().add(0.5, yOffset, 0.5);
                 ArmorStand stand = (ArmorStand) loc.getWorld().spawnEntity(lineLoc, EntityType.ARMOR_STAND);

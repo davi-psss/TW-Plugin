@@ -11,6 +11,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.Effect;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -23,6 +24,7 @@ public class MachineManager {
 
     private final TWMaquinasPlugin plugin;
     private final MachineRepository repository;
+
     private final Map<String, MachineType> machineTypes = new LinkedHashMap<>();
     private final Map<String, PlacedMachine> placedMachines = new ConcurrentHashMap<>();
 
@@ -33,11 +35,12 @@ public class MachineManager {
     public MachineManager(TWMaquinasPlugin plugin, MachineRepository repository) {
         this.plugin = plugin;
         this.repository = repository;
+
         loadConfigTypes();
         this.placedMachines.putAll(repository.loadAllMachines());
+
         startEngineTask();
 
-        // Carrega hologramas das máquinas já salvas após a inicialização do mundo
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             for (PlacedMachine m : placedMachines.values()) {
                 MachineType type = machineTypes.get(m.getTypeId());
@@ -57,6 +60,7 @@ public class MachineManager {
             String name = sec.getString(key + ".nome", "&aMáquina");
             Material mat = Material.matchMaterial(sec.getString(key + ".material", "COAL_BLOCK"));
             if (mat == null) mat = Material.COAL_BLOCK;
+
             String reqRank = sec.getString(key + ".rank-necessario", "CARVAO");
             double cost = sec.getDouble(key + ".custo-compra", 10000.0);
             double val = sec.getDouble(key + ".valor-por-ciclo", 500.0);
@@ -71,6 +75,7 @@ public class MachineManager {
             @Override
             public void run() {
                 long nowSec = System.currentTimeMillis() / 1000L;
+
                 for (PlacedMachine machine : placedMachines.values()) {
                     MachineType type = machineTypes.get(machine.getTypeId());
                     if (type == null) continue;
@@ -85,18 +90,27 @@ public class MachineManager {
                         continue;
                     }
 
-                    if (nowSec - machine.getLastTickEpochSeconds() >= type.getCycleSeconds()) {
+                    double realCycleSeconds = Math.max(1.0, type.getCycleSeconds() - ((machine.getSpeedLevel() - 1) * 0.5));
+
+                    if (nowSec - machine.getLastTickEpochSeconds() >= realCycleSeconds) {
                         machine.setLastTickEpochSeconds(nowSec);
 
-                        if (machine.consumeFuel(1)) {
-                            double levelBonus = 1.0 + ((machine.getLevel() - 1) * 0.25);
-                            double generated = type.getValuePerCycle() * machine.getStackAmount() * levelBonus;
-                            machine.addStoredEarnings(generated);
+                        double fuelSaveChance = (machine.getFuelEfficiencyLevel() - 1) * 0.05;
+                        boolean consumeFuel = Math.random() >= fuelSaveChance;
 
-                            loc.getWorld().playEffect(loc.clone().add(0.5, 1.0, 0.5), Effect.HAPPY_VILLAGER, 0);
-                            plugin.getHologramManager().updateOrCreateHologram(machine, type);
+                        if (!consumeFuel || machine.consumeFuel(1)) {
+                            double maxStorage = (type.getValuePerCycle() * machine.getStackAmount()) * (10 * machine.getStorageLevel());
+                            if (machine.getStoredEarnings() < maxStorage) {
+                                double generated = type.getValuePerCycle() * machine.getStackAmount();
+                                machine.addStoredEarnings(generated);
+                                machine.addTotalGenerated(generated);
+                                playMachineEffects(loc, type.getId());
+                            }
                         }
                     }
+
+                    // Fora do if do ciclo, para animar a barra a cada segundo
+                    plugin.getHologramManager().updateOrCreateHologram(machine, type);
                 }
             }
         }.runTaskTimer(plugin, 20L, 20L);
@@ -104,11 +118,21 @@ public class MachineManager {
         new BukkitRunnable() {
             @Override
             public void run() {
-                for (PlacedMachine m : placedMachines.values()) {
-                    repository.saveMachine(m);
-                }
+                saveAllSync();
             }
-        }.runTaskTimerAsynchronously(plugin, 3600L, 3600L);
+        }.runTaskTimerAsynchronously(plugin, 72000L, 72000L);
+    }
+
+    private void playMachineEffects(Location loc, String typeId) {
+        Location center = loc.clone().add(0.5, 1.0, 0.5);
+        if (typeId.equals("NEVE") || typeId.equals("RENA") || typeId.equals("NOEL")) {
+            loc.getWorld().playEffect(center, Effect.SNOW_SHOVEL, 0);
+        } else if (typeId.equals("SINO") || typeId.equals("ESTRELA") || typeId.equals("DUENDE")) {
+            loc.getWorld().playEffect(center, Effect.MAGIC_CRIT, 0);
+        } else {
+            loc.getWorld().playEffect(center, Effect.HAPPY_VILLAGER, 0);
+        }
+        loc.getWorld().playSound(center, Sound.CHICKEN_EGG_POP, 0.1f, 0.5f);
     }
 
     public boolean hasRequiredRank(String playerRank, String playerPrestige, String requiredRank) {
