@@ -5,6 +5,7 @@ import br.com.tw.core.data.TWUser;
 import br.com.tw.core.menus.TWConfirmationMenu;
 import br.com.tw.core.menus.TWMenu;
 import br.com.tw.core.utils.TWFormat;
+import br.com.tw.core.utils.TWMenuFrame;
 import br.com.tw.farms.TWFarmsPlugin;
 import br.com.tw.farms.managers.FarmManager;
 import br.com.tw.farms.models.FarmType;
@@ -106,11 +107,7 @@ public final class FarmShopMenu implements TWMenu {
         int row = slot / 9;
         int column = slot % 9;
         boolean edge = row == 0 || row == 5 || column == 0 || column == 8;
-        ItemStack pane = new ItemStack(Material.STAINED_GLASS_PANE, 1,
-                (short) (edge ? (row == 0 || row == 5 ? 13 : 5) : 15));
-        ItemMeta meta = pane.getItemMeta();
-        meta.setDisplayName(" ");
-        pane.setItemMeta(meta);
+        ItemStack pane = TWMenuFrame.stainedGlassPane(edge ? (row == 0 || row == 5 ? 13 : 5) : 15);
         return pane;
     }
 
@@ -206,13 +203,13 @@ public final class FarmShopMenu implements TWMenu {
         }
         TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
         player.getInventory().addItem(item);
-        player.playSound(player.getLocation(), Sound.ORB_PICKUP, 1f, 1.4f);
+        player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1.4f);
         player.sendMessage(ChatColor.GREEN + "Compra concluída por $" + TWFormat.formatarDinheiro(cost) + ".");
     }
 
     public void open() {
         player.openInventory(inventory);
-        player.playSound(player.getLocation(), Sound.CHEST_OPEN, 0.5f, 1f);
+        player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1f);
     }
 
     @Override

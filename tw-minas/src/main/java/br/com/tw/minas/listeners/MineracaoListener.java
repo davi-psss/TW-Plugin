@@ -62,7 +62,7 @@ public class MineracaoListener implements Listener {
         }
 
         if (event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK) {
-            ItemStack item = player.getItemInHand();
+            ItemStack item = player.getInventory().getItemInMainHand();
             if (item != null && item.getType().name().endsWith("PICKAXE")) {
                 new OficinaMenu(player).open();
             }
@@ -80,7 +80,7 @@ public class MineracaoListener implements Listener {
         event.setCancelled(true);
 
         // Valida se o jogador está realmente com a Picareta na mão
-        ItemStack hand = player.getItemInHand();
+        ItemStack hand = player.getInventory().getItemInMainHand();
         if (hand == null || !hand.getType().name().endsWith("PICKAXE")) {
             player.sendMessage(ChatColor.RED + "Precisas de usar a tua Picareta de Natal para minerar!");
             return;
@@ -101,7 +101,7 @@ public class MineracaoListener implements Listener {
         if (user == null) return;
 
         TWEconomiaPlugin eco = TWEconomiaPlugin.getInstance();
-        if (eco.getBlockPrice(mainBlock.getType(), mainBlock.getData()) <= 0) {
+        if (eco.getBlockPrice(mainBlock.getType()) <= 0) {
             return;
         }
 
@@ -119,19 +119,19 @@ public class MineracaoListener implements Listener {
             } else if (checkSkill(user, "trator", 0.002)) {
                 skillTriggered = true;
                 blocksToBreak = getBlocksInRadius(mainBlock, 2, 0, 2);
-                player.playSound(player.getLocation(), Sound.MINECART_BASE, 1f, 1f);
+                player.playSound(player.getLocation(), Sound.ENTITY_MINECART_RIDING, 1f, 1f);
             } else if (checkSkill(user, "explosao", 0.003)) {
                 skillTriggered = true;
                 blocksToBreak = getBlocksInRadius(mainBlock, 1, 1, 1);
-                player.playSound(player.getLocation(), Sound.EXPLODE, 0.5f, 2f);
+                player.playSound(player.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 0.5f, 2f);
             } else if (checkSkill(user, "broca", 0.004)) {
                 skillTriggered = true;
                 blocksToBreak = getBlocksInRadius(mainBlock, 0, -4, 0);
-                player.playSound(player.getLocation(), Sound.ZOMBIE_WOOD, 0.5f, 2f);
+                player.playSound(player.getLocation(), Sound.ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR, 0.5f, 2f);
             } else if (checkSkill(user, "laser", 0.005)) {
                 skillTriggered = true;
                 blocksToBreak = getLaserBlocks(player, mainBlock, 5);
-                player.playSound(player.getLocation(), Sound.GHAST_FIREBALL, 0.5f, 2f);
+                player.playSound(player.getLocation(), Sound.ENTITY_GHAST_SHOOT, 0.5f, 2f);
             }
         }
 
@@ -162,7 +162,7 @@ public class MineracaoListener implements Listener {
                 new br.com.tw.core.events.TWMiningPrepareEvent(event.getPlayer(), mainBlock, blocksToBreak));
         for (Block b : blocksToBreak) {
             if (b.getType() == Material.AIR || eventManager.isSpecialBlock(b.getLocation())) continue;
-            double basePrice = eco.getBlockPrice(b.getType(), b.getData());
+            double basePrice = eco.getBlockPrice(b.getType());
 
             if (basePrice > 0) {
                 double blockPrice = basePrice + (basePrice * (lvlFortuna * 0.05));
@@ -176,7 +176,7 @@ public class MineracaoListener implements Listener {
                 totalMoney += minedEvent.getPayout();
 
                 // Remove o bloco SEM disparar eventos de física nos blocos adjacentes (Zero Lag)
-                b.setTypeIdAndData(0, (byte) 0, false);
+                b.setType(Material.AIR, false);
                 blocksCount++;
 
                 long blockTokens = 1;
@@ -197,7 +197,7 @@ public class MineracaoListener implements Listener {
             if (lvlSorteiro > 0 && Math.random() < (lvlSorteiro * 0.0003)) {
                 long bonusSorte = 100L * lvlSorteiro;
                 user.addTokens(bonusSorte);
-                player.playSound(player.getLocation(), Sound.LEVEL_UP, 0.8f, 2.0f);
+                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.8f, 2.0f);
                 player.sendMessage(ChatColor.GOLD + "§lSORTEIRO! §eEncontraste um saco extra com §b+" + bonusSorte + " Tokens§e!");
             }
 
@@ -219,10 +219,10 @@ public class MineracaoListener implements Listener {
             }
 
             if (combo >= 100) {
-                player.addPotionEffect(new PotionEffect(PotionEffectType.FAST_DIGGING, 60, 2), true);
+                player.addPotionEffect(new PotionEffect(PotionEffectType.HASTE, 60, 2), true);
                 player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 60, 1), true);
             } else if (combo >= 50) {
-                player.addPotionEffect(new PotionEffect(PotionEffectType.FAST_DIGGING, 60, 1), true);
+                player.addPotionEffect(new PotionEffect(PotionEffectType.HASTE, 60, 1), true);
             }
 
             String comboColor = (combo >= 200) ? "§c§l" : (combo >= 100) ? "§6§l" : "§e";
@@ -236,13 +236,13 @@ public class MineracaoListener implements Listener {
     }
 
     private void celebrateLevelUp(Player player, int novoNivel) {
-        player.playSound(player.getLocation(), Sound.LEVEL_UP, 1f, 0.8f);
+        player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 0.8f);
         player.sendMessage("");
         player.sendMessage("§b§lPICARETA EVOLUÍDA!");
         player.sendMessage("§7A tua picareta atingiu o nível §e§l" + novoNivel + "§7!");
         player.sendMessage("");
 
-        Firework fw = (Firework) player.getWorld().spawnEntity(player.getLocation(), EntityType.FIREWORK);
+        Firework fw = (Firework) player.getWorld().spawnEntity(player.getLocation(), EntityType.FIREWORK_ROCKET);
         FireworkMeta fwm = fw.getFireworkMeta();
         fwm.addEffect(FireworkEffect.builder().withColor(Color.AQUA, Color.YELLOW).with(FireworkEffect.Type.BALL_LARGE).withTrail().build());
         fwm.setPower(1);
@@ -250,7 +250,7 @@ public class MineracaoListener implements Listener {
     }
 
     private void updatePickaxeLore(Player player, TWUser user) {
-        ItemStack item = player.getItemInHand();
+        ItemStack item = player.getInventory().getItemInMainHand();
         if (item == null || !item.getType().name().endsWith("PICKAXE")) return;
 
         ItemMeta meta = item.getItemMeta();

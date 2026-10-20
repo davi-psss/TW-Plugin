@@ -38,10 +38,7 @@ public final class FarmPanelMenu implements TWMenu {
 
     private void setup() {
         for (int slot = 0; slot < inventory.getSize(); slot++) {
-            ItemStack pane = new ItemStack(Material.STAINED_GLASS_PANE, 1, (short) 15);
-            ItemMeta meta = pane.getItemMeta();
-            meta.setDisplayName(" ");
-            pane.setItemMeta(meta);
+            ItemStack pane = TWMenuFrame.stainedGlassPane(15);
             inventory.setItem(slot, pane);
         }
         TWMenuFrame.apply(inventory);
@@ -138,13 +135,13 @@ public final class FarmPanelMenu implements TWMenu {
         manager.removeFarm(farm.getBukkitLocation());
         TWFarmsPlugin.getInstance().getHologramManager().remove(farm.getLocationKey());
         player.closeInventory();
-        player.playSound(player.getLocation(), Sound.ITEM_PICKUP, 1f, 1f);
+        player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1f, 1f);
         player.sendMessage(ChatColor.GREEN + "Farm desmontada; itens, safra e upgrades foram preservados.");
     }
 
     public void open() {
         player.openInventory(inventory);
-        player.playSound(player.getLocation(), Sound.CHEST_OPEN, 0.5f, 1f);
+        player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1f);
     }
 
     @Override

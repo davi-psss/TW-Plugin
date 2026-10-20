@@ -84,7 +84,7 @@ public class MachineShopMenu implements TWMenu {
     }
 
     private ItemStack createFuelButton(String name, int units, double price) {
-        ItemStack item = new ItemStack(Material.COAL, 1, (short) 1);
+        ItemStack item = new ItemStack(Material.CHARCOAL);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(name);
         meta.setLore(Arrays.asList(
@@ -98,11 +98,7 @@ public class MachineShopMenu implements TWMenu {
     }
 
     private ItemStack createGlass(int color) {
-        ItemStack glass = new ItemStack(Material.STAINED_GLASS_PANE, 1, (short) color);
-        ItemMeta meta = glass.getItemMeta();
-        meta.setDisplayName(" ");
-        glass.setItemMeta(meta);
-        return glass;
+        return TWMenuFrame.stainedGlassPane(color);
     }
 
     @Override
@@ -118,7 +114,7 @@ public class MachineShopMenu implements TWMenu {
         MachineType type = slotMap.get(slot);
         if (type != null) {
             if (!manager.hasRequiredRank(user.getRankId(), user.getPrestigeId(), type.getRequiredRank())) {
-                player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+                player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 player.sendMessage(ChatColor.RED + "Precisas do rank " + type.getRequiredRank() + " para comprar esta máquina!");
                 return;
             }
@@ -133,7 +129,7 @@ public class MachineShopMenu implements TWMenu {
             }
 
             if (player.getInventory().firstEmpty() == -1) {
-                player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+                player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 player.sendMessage(ChatColor.RED + "O teu inventário está cheio!");
                 return;
             }
@@ -147,7 +143,7 @@ public class MachineShopMenu implements TWMenu {
 
     private void buyFuel(int units, double price) {
         if (player.getInventory().firstEmpty() == -1) {
-            player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
             player.sendMessage(ChatColor.RED + "O teu inventário está cheio!");
             return;
         }
@@ -164,11 +160,11 @@ public class MachineShopMenu implements TWMenu {
                 return;
             }
             TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
-            player.playSound(player.getLocation(), Sound.LEVEL_UP, 1f, 1.5f);
+            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.5f);
             player.sendMessage(ChatColor.GREEN + "Compraste " + amount + "x " + type.getDisplayName()
                     + ChatColor.GREEN + " por $" + TWFormat.formatarDinheiro(totalCost) + "!");
         } else {
-            player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
             player.sendMessage(ChatColor.RED + "Faltam $" + TWFormat.formatarDinheiro(totalCost - user.getBalance())
                     + " para concluir a compra.");
         }
@@ -183,10 +179,10 @@ public class MachineShopMenu implements TWMenu {
                 return;
             }
             TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
-            player.playSound(player.getLocation(), Sound.ORB_PICKUP, 1f, 1.2f);
+            player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1.2f);
             player.sendMessage(ChatColor.GREEN + "Compraste " + units + "x ciclos de Combustível!");
         } else {
-            player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
             player.sendMessage(ChatColor.RED + "Não tens saldo suficiente!");
         }
     }
@@ -214,6 +210,6 @@ public class MachineShopMenu implements TWMenu {
 
     public void open() {
         player.openInventory(inventory);
-        player.playSound(player.getLocation(), Sound.CHEST_OPEN, 0.5f, 1f);
+        player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1f);
     }
 }

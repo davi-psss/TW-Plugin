@@ -23,7 +23,6 @@ public class TWScoreboardManager {
 
     private final TWCorePlugin plugin;
     private BukkitTask updateTask;
-    private boolean pingFailureLogged;
     private boolean providerFailureLogged;
     private boolean playerUpdateFailureLogged;
 
@@ -159,15 +158,6 @@ public class TWScoreboardManager {
     }
 
     private int getPing(Player player) {
-        try {
-            Object entityPlayer = player.getClass().getMethod("getHandle").invoke(player);
-            return (int) entityPlayer.getClass().getField("ping").get(entityPlayer);
-        } catch (ReflectiveOperationException | SecurityException e) {
-            if (!pingFailureLogged) {
-                plugin.getLogger().log(java.util.logging.Level.WARNING, "Não foi possível obter o ping via NMS.", e);
-                pingFailureLogged = true;
-            }
-            return -1;
-        }
+        return player.getPing();
     }
 }

@@ -8,9 +8,9 @@ import br.com.tw.minas.TWMinasPlugin;
 import br.com.tw.minas.utils.TWBossBar;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.Effect;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -143,7 +143,7 @@ public class MineEventManager implements Listener {
                         + (happyHourDurationMillis / 60000L) + " minutos!");
                 Bukkit.broadcastMessage("");
                 for (Player p : Bukkit.getOnlinePlayers()) {
-                    p.playSound(p.getLocation(), Sound.ENDERDRAGON_GROWL, 0.7f, 1.4f);
+                    p.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 0.7f, 1.4f);
                 }
             }
         }
@@ -154,7 +154,7 @@ public class MineEventManager implements Listener {
             loc.getBlock().setType(Material.ENDER_CHEST);
             activeGifts.put(loc, System.currentTimeMillis() + giftLifetimeMillis);
 
-            triggerPlayer.playSound(loc, Sound.CHEST_OPEN, 1f, 1.5f);
+            triggerPlayer.playSound(loc, Sound.BLOCK_CHEST_OPEN, 1f, 1.5f);
             triggerPlayer.sendMessage(ChatColor.LIGHT_PURPLE + "" + ChatColor.BOLD + "PRESENTE OCULTO! " +
                     ChatColor.YELLOW + "Encontraste uma Caixa dos Duendes! Clica nela antes que desapareça ("
                             + (giftLifetimeMillis / 1000L) + "s)!");
@@ -165,8 +165,8 @@ public class MineEventManager implements Listener {
             loc.getBlock().setType(Material.SEA_LANTERN);
             activeMeteorites.put(loc, meteoriteHealth);
 
-            loc.getWorld().playEffect(loc, Effect.EXPLOSION_LARGE, 0);
-            triggerPlayer.playSound(loc, Sound.EXPLODE, 1f, 0.8f);
+            loc.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, loc, 1);
+            triggerPlayer.playSound(loc, Sound.ENTITY_GENERIC_EXPLODE, 1f, 0.8f);
             Bukkit.broadcastMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "[METEORITO] " +
                     ChatColor.YELLOW + "Um Meteorito Estelar caiu perto de " + ChatColor.AQUA + triggerPlayer.getName() +
                     ChatColor.YELLOW + " na mina! Quebrem-no para ganhar muitos Tokens!");
@@ -193,11 +193,11 @@ public class MineEventManager implements Listener {
         user.addTokens(bonusTokens);
         user.addBalance(bonusMoney);
 
-        player.addPotionEffect(new PotionEffect(PotionEffectType.FAST_DIGGING, 20 * 15, 3), true);
+        player.addPotionEffect(new PotionEffect(PotionEffectType.HASTE, 20 * 15, 3), true);
         player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 20 * 15, 2), true);
 
-        player.getWorld().playEffect(loc.add(0.5, 0.5, 0.5), Effect.HEART, 0);
-        player.playSound(player.getLocation(), Sound.LEVEL_UP, 1f, 2f);
+        player.getWorld().spawnParticle(Particle.HEART, loc.add(0.5, 0.5, 0.5), 1);
+        player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 2f);
         player.sendMessage(ChatColor.LIGHT_PURPLE + "" + ChatColor.BOLD + "CAIXA DOS DUENDES ABERTA! " +
                 ChatColor.AQUA + "+" + bonusTokens + " Tokens" + ChatColor.WHITE + ", " +
                 ChatColor.GREEN + "+$" + TWFormat.formatarDinheiro(bonusMoney) + ChatColor.WHITE + " e " +
@@ -226,13 +226,13 @@ public class MineEventManager implements Listener {
             block.setType(Material.AIR);
             long finalBonus = 250L;
             user.addTokens(finalBonus);
-            player.playSound(loc, Sound.EXPLODE, 1f, 1.5f);
+            player.playSound(loc, Sound.ENTITY_GENERIC_EXPLODE, 1f, 1.5f);
             player.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "METEORITO DESTRUÍDO! " +
                     ChatColor.AQUA + "Ganhaste o bónus final de +" + finalBonus + " Tokens!");
         } else {
             activeMeteorites.put(loc, newHp);
-            player.playSound(loc, Sound.ORB_PICKUP, 0.6f, 1.8f);
-            loc.getWorld().playEffect(loc.clone().add(0.5, 0.5, 0.5), Effect.LAVA_POP, 0);
+            player.playSound(loc, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.6f, 1.8f);
+            loc.getWorld().spawnParticle(Particle.LAVA, loc.clone().add(0.5, 0.5, 0.5), 1);
         }
         return true;
     }

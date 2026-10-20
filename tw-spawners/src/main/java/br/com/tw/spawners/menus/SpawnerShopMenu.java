@@ -54,7 +54,7 @@ public class SpawnerShopMenu implements TWMenu {
             slotMap.put(slot, type);
 
             boolean unlocked = user != null && manager.hasRequiredRank(user.getRankId(), user.getPrestigeId(), type.getRequiredRank());
-            ItemStack item = new ItemStack(Material.MOB_SPAWNER);
+            ItemStack item = new ItemStack(Material.SPAWNER);
             ItemMeta meta = item.getItemMeta();
             meta.setDisplayName(type.getDisplayName());
             meta.setLore(Arrays.asList(
@@ -92,11 +92,7 @@ public class SpawnerShopMenu implements TWMenu {
     }
 
     private ItemStack createGlass(int color) {
-        ItemStack glass = new ItemStack(Material.STAINED_GLASS_PANE, 1, (short) color);
-        ItemMeta meta = glass.getItemMeta();
-        meta.setDisplayName(" ");
-        glass.setItemMeta(meta);
-        return glass;
+        return TWMenuFrame.stainedGlassPane(color);
     }
 
     @Override
@@ -111,7 +107,7 @@ public class SpawnerShopMenu implements TWMenu {
         SpawnerType type = slotMap.get(slot);
         if (type != null) {
             if (!manager.hasRequiredRank(user.getRankId(), user.getPrestigeId(), type.getRequiredRank())) {
-                player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+                player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 player.sendMessage(ChatColor.RED + "Precisas do rank " + type.getRequiredRank() + " para comprar isto!");
                 return;
             }
@@ -124,7 +120,7 @@ public class SpawnerShopMenu implements TWMenu {
             }
 
             if (player.getInventory().firstEmpty() == -1) {
-                player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+                player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 player.sendMessage(ChatColor.RED + "O teu inventário está cheio!");
                 return;
             }
@@ -146,11 +142,11 @@ public class SpawnerShopMenu implements TWMenu {
                 return;
             }
             TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
-            player.playSound(player.getLocation(), Sound.LEVEL_UP, 1f, 1.5f);
+            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.5f);
             player.sendMessage(ChatColor.GREEN + "Compraste " + amount + "x " + type.getDisplayName()
                     + ChatColor.GREEN + " por $" + TWFormat.formatarDinheiro(price) + "!");
         } else {
-            player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
             player.sendMessage(ChatColor.RED + "Faltam $" + TWFormat.formatarDinheiro(price - user.getBalance()) + ".");
         }
     }
@@ -171,17 +167,17 @@ public class SpawnerShopMenu implements TWMenu {
 
     private void buyBooster(double mult, int mins, double price) {
         if (player.getInventory().firstEmpty() == -1) {
-            player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
             player.sendMessage(ChatColor.RED + "Inventário cheio!");
             return;
         }
         if (user.removeBalance(price)) {
             TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
             player.getInventory().addItem(manager.createBoosterItem(mult, mins));
-            player.playSound(player.getLocation(), Sound.ORB_PICKUP, 1f, 1.2f);
+            player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1.2f);
             player.sendMessage(ChatColor.GREEN + "Booster comprado com sucesso!");
         } else {
-            player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
             player.sendMessage(ChatColor.RED + "Saldo insuficiente!");
         }
     }
@@ -191,6 +187,6 @@ public class SpawnerShopMenu implements TWMenu {
 
     public void open() {
         player.openInventory(inventory);
-        player.playSound(player.getLocation(), Sound.CHEST_OPEN, 0.5f, 1f);
+        player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1f);
     }
 }

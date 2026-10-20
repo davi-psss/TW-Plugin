@@ -1,6 +1,5 @@
 package br.com.tw.core.utils;
 
-import br.com.tw.core.TWCorePlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
@@ -8,17 +7,14 @@ import org.bukkit.World;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Player;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
-import java.util.logging.Level;
 
 public class TWHologram {
 
@@ -127,33 +123,6 @@ public class TWHologram {
         if (orphanCleanupTask != null) {
             orphanCleanupTask.cancel();
             orphanCleanupTask = null;
-        }
-    }
-
-    public void destroyForPlayer(Player player, World sourceWorld) {
-        List<Integer> entityIds = new ArrayList<>();
-        for (Entity entity : sourceWorld.getEntities()) {
-            if (entity instanceof ArmorStand && getLocationKey(entity) != null) {
-                entityIds.add(entity.getEntityId());
-            }
-        }
-        if (entityIds.isEmpty()) return;
-
-        int[] ids = new int[entityIds.size()];
-        for (int i = 0; i < entityIds.size(); i++) {
-            ids[i] = entityIds.get(i);
-        }
-
-        try {
-            String nmsPackage = TWProtocol.getNmsPackage();
-            Class<?> packetClass = Class.forName(nmsPackage + "PacketPlayOutEntityDestroy");
-            Constructor<?> constructor = packetClass.getConstructor(int[].class);
-            Object packet = constructor.newInstance((Object) ids);
-
-            TWProtocol.sendPacket(TWCorePlugin.getInstance(), player, packet);
-        } catch (ReflectiveOperationException | SecurityException e) {
-            plugin.getLogger().log(Level.SEVERE,
-                    "Não foi possível enviar o pacote de destruição dos hologramas para " + player.getName(), e);
         }
     }
 

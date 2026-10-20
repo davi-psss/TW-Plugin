@@ -2,6 +2,7 @@ package br.com.tw.farms.menus;
 
 import br.com.tw.core.TWCorePlugin;
 import br.com.tw.core.menus.TWMenu;
+import br.com.tw.core.utils.TWMenuFrame;
 import br.com.tw.farms.TWFarmsPlugin;
 import br.com.tw.farms.managers.FarmManager;
 import br.com.tw.spawners.TWSpawnersPlugin;
@@ -35,10 +36,7 @@ public final class FarmAlchemyMenu implements TWMenu {
 
     private void setup() {
         for (int slot = 0; slot < inventory.getSize(); slot++) {
-            ItemStack pane = new ItemStack(Material.STAINED_GLASS_PANE, 1, (short) 10);
-            ItemMeta paneMeta = pane.getItemMeta();
-            paneMeta.setDisplayName(" ");
-            pane.setItemMeta(paneMeta);
+            ItemStack pane = TWMenuFrame.stainedGlassPane(10);
             inventory.setItem(slot, pane);
         }
         spawnerSlots.clear();
@@ -48,7 +46,7 @@ public final class FarmAlchemyMenu implements TWMenu {
             if (!spawner.getOwnerUuid().equals(player.getUniqueId()) || index >= slots.length) continue;
             int slot = slots[index++];
             spawnerSlots.put(slot, spawner);
-            ItemStack item = new ItemStack(Material.MOB_SPAWNER);
+            ItemStack item = new ItemStack(Material.SPAWNER);
             ItemMeta meta = item.getItemMeta();
             meta.setDisplayName("§dAlquimia no Spawner " + spawner.getTypeId());
             meta.setLore(Arrays.asList("§7XP disponível: §b" + spawner.getStoredXp(),

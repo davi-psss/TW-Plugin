@@ -61,18 +61,18 @@ public class OficinaMenu implements TWMenu {
                 "§7Tokens Disponíveis: §b" + br.com.tw.core.utils.TWFormat.formatarDinheiro(user.getTokens())));
 
         renderSkill(11, "fortuna", Material.GOLD_NUGGET, "§eFortuna", "Aumenta o dinheiro ganho.");
-        renderSkill(12, "cacador", Material.SNOW_BALL, "§bCaçador de Flocos", "Aumenta o drop de Tokens.");
-        renderSkill(13, "sabedoria", Material.EXP_BOTTLE, "§aSabedoria", "Aumenta o XP da Picareta.");
+        renderSkill(12, "cacador", Material.SNOWBALL, "§bCaçador de Flocos", "Aumenta o drop de Tokens.");
+        renderSkill(13, "sabedoria", Material.EXPERIENCE_BOTTLE, "§aSabedoria", "Aumenta o XP da Picareta.");
         renderSkill(14, "sorteiro", Material.TRIPWIRE_HOOK, "§6Sorteiro", "Chance de achar Chaves.");
         renderSkill(15, "jackpot", Material.EMERALD, "§a§lJackpot", "Dobra o dinheiro de um bloco.");
         renderSkill(20, "explosao", Material.TNT, "§cExplosão 3x3", "Quebra blocos em volta.");
-        renderSkill(21, "broca", Material.PISTON_BASE, "§7Broca", "Destrói blocos para baixo.");
+        renderSkill(21, "broca", Material.PISTON, "§7Broca", "Destrói blocos para baixo.");
         renderSkill(22, "laser", Material.BEACON, "§bLaser", "Destrói blocos em linha.");
         renderSkill(23, "trator", Material.MINECART, "§8Trator", "Limpa a camada atual.");
         renderSkill(24, "avalanche", Material.NETHER_STAR, "§4§lAvalanche", "O poder mais raro.");
         renderSkill(25, "bateria", Material.REDSTONE, "§cBateria de Combo", "Aumenta o tempo do combo.");
 
-        inventory.setItem(40, createItem(Material.WOOD_DOOR, "§cVoltar", "§7Retornar à Central."));
+        inventory.setItem(40, createItem(Material.OAK_DOOR, "§cVoltar", "§7Retornar à Central."));
     }
 
     private void renderSkill(int slot, String id, Material mat, String name, String desc) {
@@ -106,11 +106,11 @@ public class OficinaMenu implements TWMenu {
                 // Salva no banco de dados para evitar perda em caso de crash
                 TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
 
-                player.playSound(player.getLocation(), Sound.LEVEL_UP, 1f, 2f);
+                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 2f);
                 player.sendMessage(ChatColor.GREEN + "Habilidade " + info.id.toUpperCase() + " evoluída para o nível " + (currentLvl + 1) + "!");
                 setupItems();
             } else {
-                player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+                player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 long faltam = cost - user.getTokens();
                 player.sendMessage(ChatColor.RED + "Não tens Tokens suficientes! Faltam " + br.com.tw.core.utils.TWFormat.formatarDinheiro(faltam) + ".");
             }

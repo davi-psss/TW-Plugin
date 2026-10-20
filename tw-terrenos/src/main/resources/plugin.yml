@@ -1,5 +1,6 @@
 name: tw-terrenos
 version: 1.0
+api-version: '26.3'
 main: br.com.tw.terrenos.TWTerrenosPlugin
 depend: [tw-core]
 commands:

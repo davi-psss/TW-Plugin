@@ -18,6 +18,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
+import org.bukkit.block.data.Ageable;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -106,23 +107,54 @@ public final class FarmManager {
 
     private String defaultPlantingItem(String id, Material legacyMaterial) {
         switch (id.toUpperCase(Locale.ROOT)) {
-            case "TRIGO": return "SEEDS";
-            case "CENOURA": return "CARROT_ITEM";
-            case "BATATA": return "POTATO_ITEM";
+            case "TRIGO": return "WHEAT_SEEDS";
+            case "CENOURA": return "CARROT";
+            case "BATATA": return "POTATO";
             case "CANA": return "SUGAR_CANE";
             case "CACTO": return "CACTUS";
             case "MELANCIA": return "MELON_SEEDS";
-            case "FUNGUS": return "NETHER_STALK";
+            case "FUNGUS": return "NETHER_WART";
             default: return legacyMaterial.name();
         }
     }
 
     private Material requireMaterial(String path, String name) {
-        Material material = name == null ? null : Material.matchMaterial(name);
+        String normalizedName = name == null ? null : normalizeLegacyMaterial(path, name);
+        Material material = normalizedName == null ? null : Material.matchMaterial(normalizedName);
         if (material == null || material == Material.AIR) {
             throw new IllegalArgumentException("Material inválido em " + path + ": " + name);
         }
         return material;
+    }
+
+    private String normalizeLegacyMaterial(String path, String name) {
+        String normalized = name.toUpperCase(Locale.ROOT);
+        boolean cropBlock = path.contains(".plant-materials") || path.contains(".harvest-materials");
+        switch (normalized) {
+            case "SEEDS":
+                return "WHEAT_SEEDS";
+            case "CARROT_ITEM":
+                return "CARROT";
+            case "POTATO_ITEM":
+                return "POTATO";
+            case "CROPS":
+                return "WHEAT";
+            case "CARROT":
+                return cropBlock ? "CARROTS" : "CARROT";
+            case "POTATO":
+                return cropBlock ? "POTATOES" : "POTATO";
+            case "NETHER_STALK":
+            case "NETHER_WARTS":
+                return "NETHER_WART";
+            case "SUGAR_CANE_BLOCK":
+                return "SUGAR_CANE";
+            case "MELON_BLOCK":
+                return "MELON";
+            case "MELON":
+                return path.endsWith(".material") || path.endsWith(".produto") ? "MELON_SLICE" : "MELON";
+            default:
+                return normalized;
+        }
     }
 
     private List<Material> readMaterials(String path, List<String> names) {
@@ -409,7 +441,7 @@ public final class FarmManager {
     }
 
     public ItemStack createFertilizerItem(long units, int soil) {
-        ItemStack item = new ItemStack(Material.INK_SACK, 1, (short) 15);
+        ItemStack item = new ItemStack(Material.BONE_MEAL);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(soil == 3 ? "§dSolo Mágico" : soil == 2 ? "§6Adubo Enriquecido" : "§aAdubo Normal");
         meta.setLore(Arrays.asList("§7Unidades: §e" + units, "§7Nível de solo: §f" + soil,
@@ -616,17 +648,22 @@ public final class FarmManager {
         if (crop == null || !isAgeCrop(block.getType())) return false;
         double multiplier = getGrowthMultiplier(crop);
         if (multiplier <= 1.0) return false;
-        int maximumAge = block.getType() == Material.NETHER_STALK ? 3 : 7;
-        int currentAge = block.getData() & 0x7;
-        int proposedAge = proposedState.getData().getData() & 0x7;
-        int advancedAge = Math.min(maximumAge,
+        if (!(block.getBlockData() instanceof Ageable) || !(proposedState.getBlockData() instanceof Ageable)) {
+            return false;
+        }
+        Ageable currentData = (Ageable) block.getBlockData();
+        Ageable proposedData = (Ageable) proposedState.getBlockData();
+        int currentAge = currentData.getAge();
+        int proposedAge = proposedData.getAge();
+        int advancedAge = Math.min(currentData.getMaximumAge(),
                 currentAge + (int) Math.ceil(Math.max(1, proposedAge - currentAge) * multiplier));
-        block.setData((byte) advancedAge);
+        currentData.setAge(advancedAge);
+        block.setBlockData(currentData, false);
         return true;
     }
 
     private boolean isColumnCrop(Material material) {
-        return material == Material.CACTUS || material == Material.SUGAR_CANE_BLOCK;
+        return material == Material.CACTUS || material == Material.SUGAR_CANE;
     }
 
     private int getColumnHeight(Block block, Material material) {
@@ -700,7 +737,7 @@ public final class FarmManager {
         Material material = block.getType();
         BlockState state = block.getState();
         if (isAgeCrop(material)) return isMature(state);
-        if (material == Material.CACTUS || material == Material.SUGAR_CANE_BLOCK) {
+        if (material == Material.CACTUS || material == Material.SUGAR_CANE) {
             Block base = block;
             while (base.getRelative(0, -1, 0).getType() == material) base = base.getRelative(0, -1, 0);
             int height = 1;
@@ -711,19 +748,14 @@ public final class FarmManager {
     }
 
     public boolean isMature(BlockState state) {
-        Material material = state.getType();
-        if (material == Material.CROPS || material == Material.CARROT || material == Material.POTATO) {
-            return (state.getData().getData() & 0x7) >= 7;
-        }
-        if (material == Material.NETHER_STALK) {
-            return (state.getData().getData() & 0x3) >= 3;
-        }
-        return false;
+        if (!(state.getBlockData() instanceof Ageable)) return false;
+        Ageable ageable = (Ageable) state.getBlockData();
+        return ageable.getAge() >= ageable.getMaximumAge();
     }
 
     private boolean isAgeCrop(Material material) {
-        return material == Material.CROPS || material == Material.CARROT
-                || material == Material.POTATO || material == Material.NETHER_STALK
+        return material == Material.WHEAT || material == Material.CARROTS
+                || material == Material.POTATOES || material == Material.NETHER_WART
                 || material == Material.MELON_STEM || material == Material.PUMPKIN_STEM;
     }
 
@@ -748,14 +780,15 @@ public final class FarmManager {
         silo.harvest(yieldMultiplier - golden, golden);
         saveStorageAsync(silo);
 
-        if (target.getType() == Material.CROPS || target.getType() == Material.CARROT
-                || target.getType() == Material.POTATO || target.getType() == Material.NETHER_STALK) {
+        if (isAgeCrop(target.getType())) {
             BlockState state = target.getState();
-            state.getData().setData((byte) 0);
+            Ageable data = (Ageable) state.getBlockData();
+            data.setAge(0);
+            state.setBlockData(data);
             state.update(true, false);
-        } else if (target.getType() == Material.MELON_BLOCK) {
+        } else if (target.getType() == Material.MELON) {
             target.setType(Material.AIR);
-        } else if (target.getType() == Material.CACTUS || target.getType() == Material.SUGAR_CANE_BLOCK) {
+        } else if (target.getType() == Material.CACTUS || target.getType() == Material.SUGAR_CANE) {
             Block harvestBlock = target;
             while (harvestBlock.getRelative(0, 1, 0).getType() == target.getType()) {
                 harvestBlock = harvestBlock.getRelative(0, 1, 0);

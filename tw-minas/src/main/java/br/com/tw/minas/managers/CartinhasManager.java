@@ -152,7 +152,7 @@ public class CartinhasManager {
                 if (slot.progress != old) {
                     changed = true;
                     if (slot.isCompleted()) {
-                        player.playSound(player.getLocation(), Sound.LEVEL_UP, 1f, 1.8f);
+                        player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.8f);
                         player.sendMessage("");
                         player.sendMessage(ChatColor.LIGHT_PURPLE + "" + ChatColor.BOLD + "CARTINHA CONCLUÍDA! " +
                                 ChatColor.YELLOW + "(" + slot.type.getTitle() + ")");
@@ -179,7 +179,7 @@ public class CartinhasManager {
             user.addTokens(slot.rewardTokens);
             user.addBalance(slot.rewardMoney);
 
-            player.playSound(player.getLocation(), Sound.ORB_PICKUP, 1f, 1.2f);
+            player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1.2f);
             player.sendMessage(ChatColor.GREEN + "" + ChatColor.BOLD + "RECOMPENSA RESGATADA! " +
                     ChatColor.AQUA + "+" + TWFormat.formatarDinheiro(slot.rewardTokens) + " Tokens " +
                     ChatColor.GRAY + "e " + ChatColor.GREEN + "+$" + TWFormat.formatarDinheiro(slot.rewardMoney) + "!");
@@ -196,16 +196,16 @@ public class CartinhasManager {
                 slots.set(slotIndex, generateRandomMission(slotIndex, user.getPickaxeLevel()));
                 saveMissions(user, slots);
                 TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
-                player.playSound(player.getLocation(), Sound.BAT_TAKEOFF, 0.8f, 1.4f);
+                player.playSound(player.getLocation(), Sound.ENTITY_BAT_TAKEOFF, 0.8f, 1.4f);
                 player.sendMessage(ChatColor.YELLOW + "Sorteaste uma nova missão para esta Cartinha por 50 Tokens!");
                 return true;
             } else {
-                player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+                player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 player.sendMessage(ChatColor.RED + "Precisas de 50 Tokens para sortear outra missão!");
                 return false;
             }
         } else {
-            player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
             player.sendMessage(ChatColor.RED + "Ainda não concluíste o objetivo desta Cartinha! (" + slot.progress + "/" + slot.target + ")");
             return false;
         }

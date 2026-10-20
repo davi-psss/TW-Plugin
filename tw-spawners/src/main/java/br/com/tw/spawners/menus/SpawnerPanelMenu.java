@@ -42,10 +42,7 @@ public class SpawnerPanelMenu implements TWMenu {
 
     private void setupItems() {
         for (int i = 0; i < 54; i++) {
-            ItemStack glass = new ItemStack(Material.STAINED_GLASS_PANE, 1, (short) 15);
-            ItemMeta gMeta = glass.getItemMeta();
-            gMeta.setDisplayName(" ");
-            glass.setItemMeta(gMeta);
+            ItemStack glass = TWMenuFrame.stainedGlassPane(15);
             inventory.setItem(i, glass);
         }
         TWMenuFrame.apply(inventory);
@@ -58,7 +55,7 @@ public class SpawnerPanelMenu implements TWMenu {
         double globalBooster = TWEconomiaPlugin.getInstance().getGlobalBooster();
         double currentPayoutMoney = spawner.getStoredMoney() * prestigeMult * globalBooster;
 
-        ItemStack info = new ItemStack(Material.MOB_SPAWNER);
+        ItemStack info = new ItemStack(Material.SPAWNER);
         ItemMeta iMeta = info.getItemMeta();
         iMeta.setDisplayName(type.getDisplayName());
         iMeta.setLore(Arrays.asList(
@@ -70,7 +67,7 @@ public class SpawnerPanelMenu implements TWMenu {
         info.setItemMeta(iMeta);
         inventory.setItem(13, info);
 
-        ItemStack mode = new ItemStack(Material.REDSTONE_COMPARATOR);
+        ItemStack mode = new ItemStack(Material.COMPARATOR);
         ItemMeta mMeta = mode.getItemMeta();
         boolean isVirtual = spawner.isVirtualMode();
         mMeta.setDisplayName("§e§lAlternar Modo");
@@ -174,7 +171,7 @@ public class SpawnerPanelMenu implements TWMenu {
     @Override
     public void onClick(InventoryClickEvent event) {
         if (!spawner.getOwnerUuid().equals(player.getUniqueId()) && !player.hasPermission("tw.admin")) {
-            player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
             player.sendMessage(ChatColor.RED + "Apenas o proprietário pode gerir este spawner!");
             return;
         }
@@ -188,7 +185,7 @@ public class SpawnerPanelMenu implements TWMenu {
             spawner.setVirtualMode(!spawner.isVirtualMode());
             manager.saveSpawnerAsync(spawner);
             TWSpawnersPlugin.getInstance().getHologramManager().updateOrCreateHologram(spawner, type);
-            player.playSound(player.getLocation(), Sound.CLICK, 1f, 1f);
+            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             setupItems();
         }
         else if (slot == 15) {
@@ -219,7 +216,7 @@ public class SpawnerPanelMenu implements TWMenu {
             TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
 
             if (finalXp > 0) player.giveExp((int) finalXp);
-            player.playSound(player.getLocation(), Sound.LEVEL_UP, 1f, 1.5f);
+            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.5f);
             player.sendMessage("§a✔ Cofre Resgatado! §2$" + TWFormat.formatarDinheiro(finalPayout) + " §8| §b" + TWFormat.formatarDinheiro(finalTokens) + " T §8| §a" + finalXp + " XP §8| §d" + finalSouls + " Almas");
             if (soulsRemainInSilo) {
                 player.sendMessage("§eO inventário está cheio; as almas continuam guardadas no silo.");
@@ -246,7 +243,7 @@ public class SpawnerPanelMenu implements TWMenu {
         }
         else if (slot == 49) {
             if (player.getInventory().firstEmpty() == -1) {
-                player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+                player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 player.sendMessage(ChatColor.RED + "Inventário cheio!");
                 return;
             }
@@ -261,7 +258,7 @@ public class SpawnerPanelMenu implements TWMenu {
 
             manager.removeSpawner(loc);
 
-            player.playSound(player.getLocation(), Sound.ITEM_PICKUP, 1f, 1f);
+            player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1f, 1f);
             player.sendMessage("§eDesmontaste o spawner com sucesso! §aOs teus upgrades foram salvos no item.");
         }
     }
@@ -270,12 +267,12 @@ public class SpawnerPanelMenu implements TWMenu {
         manager.saveSpawnerAsync(spawner);
         TWSpawnersPlugin.getInstance().getHologramManager().updateOrCreateHologram(spawner, type);
         TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
-        player.playSound(player.getLocation(), Sound.ANVIL_USE, 1f, 1.5f);
+        player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_USE, 1f, 1.5f);
         setupItems();
     }
 
     private void sendTokenError(long cost) {
-        player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+        player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
         player.sendMessage(ChatColor.RED + "Não tens Tokens suficientes! Custo: " + TWFormat.formatarDinheiro(cost));
     }
 

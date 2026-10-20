@@ -1,6 +1,7 @@
 package br.com.tw.minas;
 
 import br.com.tw.minas.commands.MinaCommand;
+import br.com.tw.minas.listeners.MineProtectionListener;
 import br.com.tw.minas.listeners.MineracaoListener;
 import br.com.tw.minas.managers.CartinhasManager;
 import br.com.tw.minas.managers.MineEventManager;
@@ -21,6 +22,7 @@ public class TWMinasPlugin extends JavaPlugin {
         this.mineEventManager = new MineEventManager(this);
 
         getServer().getPluginManager().registerEvents(new MineracaoListener(), this);
+        getServer().getPluginManager().registerEvents(new MineProtectionListener(), this);
         getCommand("mina").setExecutor(new MinaCommand());
 
         getLogger().info("[TW-Minas] Motor de mineracao, Cartinhas (Missoes) e Eventos carregados com sucesso!");

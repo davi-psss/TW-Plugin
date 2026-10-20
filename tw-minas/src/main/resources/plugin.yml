@@ -1,5 +1,6 @@
 name: tw-minas
 version: 1.0
+api-version: '26.3'
 main: br.com.tw.minas.TWMinasPlugin
 depend: [tw-core, tw-economia]
 commands:

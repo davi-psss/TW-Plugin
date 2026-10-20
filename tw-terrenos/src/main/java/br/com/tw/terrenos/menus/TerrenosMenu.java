@@ -28,7 +28,7 @@ public class TerrenosMenu implements TWMenu {
 
     private void setupItems() {
         // Botão de Comprar Terreno
-        ItemStack comprar = new ItemStack(Material.GRASS);
+        ItemStack comprar = new ItemStack(Material.GRASS_BLOCK);
         ItemMeta comprarMeta = comprar.getItemMeta();
         comprarMeta.setDisplayName("§a§lComprar Novo Terreno");
         comprarMeta.setLore(Arrays.asList(
@@ -81,7 +81,7 @@ public class TerrenosMenu implements TWMenu {
                     }, 5L);
 
                 } else {
-                    player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+                    player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                     player.sendMessage(ChatColor.RED + "Não tens $" + br.com.tw.core.utils.TWFormat.formatarDinheiro(PRECO_TERRENO) + " para comprar um terreno.");
                 }
             }
@@ -89,7 +89,7 @@ public class TerrenosMenu implements TWMenu {
         else if (slot == 15) { // Ir para o terreno
             player.closeInventory();
             player.performCommand("p h");
-            player.playSound(player.getLocation(), Sound.ENDERMAN_TELEPORT, 1f, 1f);
+            player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
         }
     }
 
@@ -98,6 +98,6 @@ public class TerrenosMenu implements TWMenu {
 
     public void open() {
         player.openInventory(inventory);
-        player.playSound(player.getLocation(), Sound.CHEST_OPEN, 0.5f, 1f);
+        player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1f);
     }
 }

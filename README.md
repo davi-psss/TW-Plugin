@@ -1,8 +1,8 @@
 # TW Network
 
-Monorepo de plugins para uma rede Minecraft de progressão Tycoon/Rankup, construída para **Spigot 1.8.8** e **Java 8**. O conjunto reúne economia, minas, ranks, terrenos, spawners, máquinas, farms, caixas e as funcionalidades partilhadas pelo servidor.
+Monorepo de plugins para uma rede Minecraft de progressão Tycoon/Rankup, construído para **Purpur 26.3** e **Java 25**. O conjunto reúne economia, minas, ranks, terrenos, spawners, máquinas, farms, caixas e as funcionalidades partilhadas pelo servidor.
 
-> **Compatibilidade estrita:** os artefatos são compilados para Java 8 e usam a API e, em algumas funcionalidades, internals/NMS de Spigot 1.8.8. Não são destinados a versões arbitrárias de Minecraft ou Java.
+> **Compatibilidade estrita:** os artefatos são compilados com release Java 25 contra a API Purpur 26.3. Os descritores dos nove plugins internos exigem essa versão da API.
 
 ## Índice
 
@@ -15,7 +15,7 @@ Monorepo de plugins para uma rede Minecraft de progressão Tycoon/Rankup, constr
 
 ## Visão geral e módulos
 
-O projeto é um **monorepo Maven**: o POM raiz agrega dez plugins JAR independentes, que partilham APIs por dependências Maven e integram-se através dos serviços, eventos e dados do `tw-core`. O Maven compila os módulos na ordem necessária; o servidor deve carregar cada dependência antes do plugin que a utiliza.
+O projeto é um **monorepo Maven**: o POM raiz agrega nove plugins JAR independentes, que partilham APIs por dependências Maven e integram-se através dos serviços, eventos e dados do `tw-core`. O Maven compila os módulos na ordem necessária; o servidor deve carregar cada dependência antes do plugin que a utiliza. O lobby é gerido pelo DeluxeHub, instalado separadamente no servidor.
 
 | Módulo | Responsabilidade | Dependências internas principais |
 |---|---|---|
@@ -23,7 +23,8 @@ O projeto é um **monorepo Maven**: o POM raiz agrega dez plugins JAR independen
 | `tw-economia` | Economia, tabela de preços de mineração, boosters e cheques. | `tw-core` |
 | `tw-ranks` | Rankups, prestígios, tags e placeholders de progressão. | `tw-core` |
 | `tw-minas` | Central de mineração, eventos, missões/cartinhas, oficina e ranking. | `tw-core`, `tw-economia` |
-| `tw-lobby` | Retorno ao lobby, inventário de transição, proteção e salto duplo. | `tw-core` |
+| `DeluxeHub` (plugin externo) | Ponto de lobby, pulo duplo e launchpads; itens fixos, scoreboard e tablist desativados para preservar o inventário do minigame. | — |
+| `Multiverse-Inventories` (plugin externo) | Separação de inventários entre mundos; configuração para minas/plots fica pendente até esses mundos existirem. | `Multiverse-Core` |
 | `tw-terrenos` | Agência e eventos de terrenos/plots. | `tw-core` |
 | `tw-maquinas` | Máquinas colocáveis que geram saldo com combustível, upgrades e armazenamento. | `tw-core`, `tw-economia` |
 | `tw-spawners` | Loja e spawners empilháveis, produção de mobs, recompensas e hologramas. | `tw-core`, `tw-economia` |
@@ -77,7 +78,7 @@ Ao acrescentar uma mecânica, prefira atualizar inventário, saldo ou armazename
 
 ### Itens especiais e compatibilidade de dados
 
-Itens colocáveis, ferramentas melhoradas, consumíveis e recompensas transportam identificadores e estado em **NBT Tags**, através do utilitário partilhado `TWItemTags`. Em alguns itens, a lore apresenta informação ao jogador; não deve ser tratada como fonte de verdade para identificadores ou níveis. Parte da integração NBT usa internals específicos da versão 1.8.8, reforçando a compatibilidade estrita com essa versão.
+Itens colocáveis, ferramentas melhoradas, consumíveis e recompensas transportam identificadores e estado em **Persistent Data Containers**, através do utilitário partilhado `TWItemTags`. Em alguns itens, a lore apresenta informação ao jogador; não deve ser tratada como fonte de verdade para identificadores ou níveis. As integrações de ActionBar, cabeçalho/rodapé do TAB e dados de itens usam APIs Bukkit/Paper, sem referências a internals NMS versionados.
 
 ## Comandos e permissões
 
@@ -96,8 +97,8 @@ Os comandos abaixo são declarados nos `plugin.yml` dos módulos. Salvo indicaç
 |  | `/ranks` (`/rank`) | — | Não configurada |
 |  | `/twadmin` | `tw.admin` | Não configurada |
 | `tw-minas` | `/mina` (`/minas`) | — | Não configurada |
-| `tw-lobby` | `/lobby` (`/hub`, `/spawn`) | — | Não configurada |
-|  | `/setlobby` | `tw.admin` | Não configurada |
+| `DeluxeHub` (externo) | `/lobby` (`/hub`, `/spawn`) | — | Configuração em `plugins/DeluxeHub/commands.yml` |
+|  | `/setlobby` | `deluxehub.command.setlobby` | Configuração em `plugins/DeluxeHub/commands.yml` |
 | `tw-terrenos` | `/terreno` (`/terrenos`, `/plot`, `/p`) | — | Não configurada |
 | `tw-maquinas` | `/maquinas` (`/maquina`) | — | Não configurada |
 | `tw-spawners` | `/spawners` (`/spawner`, `/geradores`) | — | Não configurada |
@@ -105,7 +106,7 @@ Os comandos abaixo são declarados nos `plugin.yml` dos módulos. Salvo indicaç
 | `tw-caixas` | `/key` (`/caixas`) | — | Não configurada |
 |  | `/caixa` | `tw.admin` | Não configurada |
 
-`tw.admin` também é verificada em ações de administração dentro de alguns menus/listeners. Os comandos `/booster`, `/eco`, `/twadmin`, `/setlobby` e `/caixa` verificam essa permissão no descritor e/ou no handler. `tw-farms` e `tw-caixas` declaram `tw.admin` com `default: op`; não há `permission-message` customizada para essa permissão.
+`tw.admin` também é verificada em ações de administração dentro de alguns menus/listeners. Os comandos `/booster`, `/eco`, `/twadmin` e `/caixa` verificam essa permissão no descritor e/ou no handler. `tw-farms` e `tw-caixas` declaram `tw.admin` com `default: op`; não há `permission-message` customizada para essa permissão.
 
 ### Funções principais por módulo
 
@@ -113,7 +114,7 @@ Os comandos abaixo são declarados nos `plugin.yml` dos módulos. Salvo indicaç
 - **`tw-economia`:** `/money` consulta saldo; `/pay` transfere para jogador; `/baltop` consulta o ranking; `/eco` administra saldos; `/booster` configura multiplicador global; `/cheque` cria cheques físicos, cuja validação/redemption é tratada por listener. Os preços de blocos são configurados por material.
 - **`tw-ranks`:** `/rankup` avança um nível, `/rankupmax` compra avanços possíveis, `/prestigio` evolui após o rank `MAX`, `/ranks` abre a GUI e `/twadmin` permite configurar rank/prestígio de jogador. A sequência e custos são configurados em `tw-core/config.yml` e `tw-ranks/ranks.yml`; PlaceholderAPI é opcional.
 - **`tw-minas`:** `/mina` abre a Central de Mineração, com acesso ao teleporte para a mina adequada, catálogo, oficina de picareta, cartinhas/missões e ranking. Inclui eventos de mina configuráveis e integra os blocos minerados com a economia.
-- **`tw-lobby`:** `/lobby` regressa ao ponto configurado (aliases `/hub` e `/spawn`); `/setlobby` define a localização administrativa. Listeners tratam da proteção, transição/inventário e salto duplo.
+- **`DeluxeHub` (plugin externo):** `/lobby` (`/hub`, `/spawn`) regressa ao spawn configurado e `/setlobby` define-o. O pulo duplo está ativo apenas no mundo `world`; scoreboard, tablist e itens personalizados de entrada estão desativados para preservar o inventário normal e evitar conflito com os plugins existentes. O Multiverse-Inventories separará os inventários quando os mundos de plot e mina forem criados e configurados.
 - **`tw-terrenos`:** `/terreno` abre a agência de terrenos; o listener integra os eventos de terrenos com o estado partilhado. O alias `/p` também é registado.
 - **`tw-maquinas`:** `/maquinas` abre loja/central; máquinas colocadas geram saldo por ciclo conforme tipo, stack, combustível/bateria e upgrades. O painel permite recolher ganhos e gerir melhorias/armazenamento; há hologramas e persistência.
 - **`tw-spawners`:** `/spawners` abre a loja de geradores. Spawners registados podem empilhar, gerar entidades ou operar em modo virtual, acumular moeda/tokens/recursos e aplicar melhorias, boosters e Auto-Sell. Limites de produção e stack são configuráveis; hologramas exibem o estado.
@@ -164,10 +165,10 @@ Faça backup da base antes de substituir plugins ou alterar schemas. As configur
 
 ### Pré-requisitos
 
-- JDK 8 configurado no `JAVA_HOME` e disponível no `PATH`.
+- JDK 25 configurado no `JAVA_HOME` e disponível no `PATH`.
 - Maven compatível com o projeto.
-- Acesso aos repositórios Maven declarados no POM para obter Spigot API 1.8.8 e dependências.
-- Servidor Spigot/Paper compatível com 1.8.8 e PostgreSQL configurado para o Core.
+- Acesso aos repositórios Maven declarados no POM para obter a API Purpur 26.3 e dependências.
+- Servidor Purpur 26.3 e PostgreSQL configurado para o Core.
 
 ### Build de todos os módulos
 
@@ -205,4 +206,4 @@ No Windows, [build-and-deploy.bat](build-and-deploy.bat) automatiza build/testes
 - Faça alterações a inventários, entidades e APIs Bukkit na main thread. Regressos de operações assíncronas devem ser agendados de volta para a thread do servidor.
 - Reutilize eventos e utilitários do Core, incluindo `TWItemTags`, filas assíncronas e validação de configurações.
 - Adicione ou atualize testes dos módulos afetados e valide o conjunto com `mvn clean install`.
-- Preserve a compatibilidade com Java 8 e Spigot 1.8.8; não use APIs introduzidas em versões posteriores sem uma camada compatível.
+- Preserve a compatibilidade com Java 25 e Purpur 26.3; não reintroduza APIs internas/NMS versionadas.

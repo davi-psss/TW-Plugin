@@ -113,10 +113,7 @@ public final class KeyPanelMenu implements TWMenu {
 
     private void fillBackground() {
         for (int slot = 0; slot < inventory.getSize(); slot++) {
-            ItemStack pane = new ItemStack(Material.STAINED_GLASS_PANE, 1, (short) ((slot % 2 == 0) ? 15 : 7));
-            ItemMeta meta = pane.getItemMeta();
-            meta.setDisplayName(" ");
-            pane.setItemMeta(meta);
+            ItemStack pane = TWMenuFrame.stainedGlassPane((slot % 2 == 0) ? 15 : 7);
             inventory.setItem(slot, pane);
         }
     }

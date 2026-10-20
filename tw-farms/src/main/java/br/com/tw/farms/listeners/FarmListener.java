@@ -146,7 +146,7 @@ public final class FarmListener implements Listener {
         Player player = event.getPlayer();
         Block clicked = event.getClickedBlock();
         PlacedFarm farm = manager.getFarmAt(clicked.getLocation());
-        ItemStack hand = player.getItemInHand();
+        ItemStack hand = player.getInventory().getItemInMainHand();
 
         if (farm != null) {
             event.setCancelled(true);
@@ -200,7 +200,7 @@ public final class FarmListener implements Listener {
         boolean goldenScythe = "golden_scythe".equals(TWItemTags.getString(hoe, "tw_crate_effect"));
         long scytheCharges = TWItemTags.getLong(hoe, "tw_crate_charges", 0L);
         if (goldenScythe && scytheCharges < 1L) {
-            player.setItemInHand(null);
+            player.getInventory().setItemInMainHand(null);
             player.sendMessage(ChatColor.RED + "A Foice Dourada já esgotou os seus usos.");
             return;
         }
@@ -223,14 +223,14 @@ public final class FarmListener implements Listener {
                             tags.put("tw_crate_charges", scytheCharges);
                             if (scytheCharges == 0) tags.put("tw_farm_harvester", false);
                             hoe = TWItemTags.set(hoe, tags);
-                            player.setItemInHand(hoe);
+                            player.getInventory().setItemInMainHand(hoe);
                         }
                     }
                 }
             }
         }
         if (goldenScythe && scytheCharges == 0L) {
-            player.setItemInHand(null);
+            player.getInventory().setItemInMainHand(null);
             player.sendMessage(ChatColor.YELLOW + "A Foice Dourada partiu após esgotar as cargas.");
             return;
         }
@@ -238,7 +238,7 @@ public final class FarmListener implements Listener {
         Map<String, Object> tags = new java.util.HashMap<>();
         tags.put("tw_farm_harvester", true);
         tags.put("tw_farm_hoe_harvests", Math.addExact(total, count));
-        player.setItemInHand(TWItemTags.set(hoe, tags));
+        player.getInventory().setItemInMainHand(TWItemTags.set(hoe, tags));
         if (count == 0) player.sendMessage(ChatColor.YELLOW + "Não há plantações maduras registadas por perto.");
         else player.sendMessage(ChatColor.GREEN + "A enxada enviou " + count
                 + " colheita(s) ao Armazém da Farm. Total: " + (total + count) + ".");
@@ -302,7 +302,7 @@ public final class FarmListener implements Listener {
 
     private Block findRoot(Block block) {
         Material material = block.getType();
-        if (material != Material.CACTUS && material != Material.SUGAR_CANE_BLOCK) return block;
+        if (material != Material.CACTUS && material != Material.SUGAR_CANE) return block;
         Block root = block;
         while (root.getRelative(0, -1, 0).getType() == material) root = root.getRelative(0, -1, 0);
         return root;
@@ -314,7 +314,7 @@ public final class FarmListener implements Listener {
 
     private void consume(ItemStack hand, Player player, int amount) {
         if (hand.getAmount() > amount) hand.setAmount(hand.getAmount() - amount);
-        else player.setItemInHand(null);
+        else player.getInventory().setItemInMainHand(null);
         player.updateInventory();
     }
 }

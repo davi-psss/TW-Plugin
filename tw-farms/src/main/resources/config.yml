@@ -70,10 +70,10 @@ farms:
   TRIGO:
     nome: "&eSementes de Trigo"
     material: HAY_BLOCK
-    planting-item: SEEDS
+    planting-item: WHEAT_SEEDS
     produto: WHEAT
-    plant-materials: [CROPS]
-    harvest-materials: [CROPS]
+    plant-materials: [WHEAT]
+    harvest-materials: [WHEAT]
     rank-necessario: CARVAO
     custo-compra: 50000.0
     valor-venda: 20.0
@@ -81,11 +81,11 @@ farms:
     fertilizante-por-ciclo: 1
   CENOURA:
     nome: "&6Cenouras para plantio"
-    material: CARROT_ITEM
-    planting-item: CARROT_ITEM
-    produto: CARROT_ITEM
-    plant-materials: [CARROT]
-    harvest-materials: [CARROT]
+    material: CARROT
+    planting-item: CARROT
+    produto: CARROT
+    plant-materials: [CARROTS]
+    harvest-materials: [CARROTS]
     rank-necessario: SINO
     custo-compra: 500000.0
     valor-venda: 80.0
@@ -93,11 +93,11 @@ farms:
     fertilizante-por-ciclo: 1
   BATATA:
     nome: "&eBatatas para plantio"
-    material: POTATO_ITEM
-    planting-item: POTATO_ITEM
-    produto: POTATO_ITEM
-    plant-materials: [POTATO]
-    harvest-materials: [POTATO]
+    material: POTATO
+    planting-item: POTATO
+    produto: POTATO
+    plant-materials: [POTATOES]
+    harvest-materials: [POTATOES]
     rank-necessario: SINO
     custo-compra: 500000.0
     valor-venda: 80.0
@@ -108,8 +108,8 @@ farms:
     material: SUGAR_CANE
     planting-item: SUGAR_CANE
     produto: SUGAR_CANE
-    plant-materials: [SUGAR_CANE_BLOCK]
-    harvest-materials: [SUGAR_CANE_BLOCK]
+    plant-materials: [SUGAR_CANE]
+    harvest-materials: [SUGAR_CANE]
     rank-necessario: BISCOITO
     custo-compra: 5000000.0
     valor-venda: 350.0
@@ -129,11 +129,11 @@ farms:
     fertilizante-por-ciclo: 1
   MELANCIA:
     nome: "&aSementes de Melancia"
-    material: MELON
+    material: MELON_SLICE
     planting-item: MELON_SEEDS
-    produto: MELON
+    produto: MELON_SLICE
     plant-materials: [MELON_STEM]
-    harvest-materials: [MELON_BLOCK]
+    harvest-materials: [MELON]
     rank-necessario: RENA
     custo-compra: 50000000.0
     valor-venda: 1800.0
@@ -141,11 +141,11 @@ farms:
     fertilizante-por-ciclo: 1
   FUNGUS:
     nome: "&dFungo do Nether para plantio"
-    material: NETHER_STALK
-    planting-item: NETHER_STALK
-    produto: NETHER_STALK
-    plant-materials: [NETHER_STALK]
-    harvest-materials: [NETHER_STALK]
+    material: NETHER_WART
+    planting-item: NETHER_WART
+    produto: NETHER_WART
+    plant-materials: [NETHER_WART]
+    harvest-materials: [NETHER_WART]
     rank-necessario: NOEL
     custo-compra: 500000000.0
     valor-venda: 15000.0

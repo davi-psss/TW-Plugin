@@ -25,12 +25,12 @@ public final class TWBossBar {
 
         String actionBar = message + " " + bar + ChatColor.WHITE + " "
                 + Math.round(clampedProgress * 100.0f) + "%";
-        TWProtocol.sendActionBar(TWMinasPlugin.getInstance(), player, actionBar);
+        TWProtocol.sendActionBar(player, actionBar);
     }
 
     public static void removeBossBar(Player player) {
         if (player.isOnline()) {
-            TWProtocol.sendActionBar(TWMinasPlugin.getInstance(), player, "");
+            TWProtocol.sendActionBar(player, "");
         }
     }
 

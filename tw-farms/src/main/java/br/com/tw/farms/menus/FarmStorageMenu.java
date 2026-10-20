@@ -3,6 +3,7 @@ package br.com.tw.farms.menus;
 import br.com.tw.core.TWCorePlugin;
 import br.com.tw.core.data.TWUser;
 import br.com.tw.core.menus.TWMenu;
+import br.com.tw.core.utils.TWMenuFrame;
 import br.com.tw.farms.TWFarmsPlugin;
 import br.com.tw.farms.managers.FarmManager;
 import br.com.tw.farms.models.FarmStorage;
@@ -50,10 +51,7 @@ public final class FarmStorageMenu implements TWMenu {
 
     private void setup() {
         for (int slot = 0; slot < inventory.getSize(); slot++) {
-            ItemStack pane = new ItemStack(Material.STAINED_GLASS_PANE, 1, (short) 13);
-            ItemMeta meta = pane.getItemMeta();
-            meta.setDisplayName(" ");
-            pane.setItemMeta(meta);
+            ItemStack pane = TWMenuFrame.stainedGlassPane(13);
             inventory.setItem(slot, pane);
         }
         if (selectedSilo != null && selectedType != null) {
@@ -215,7 +213,7 @@ public final class FarmStorageMenu implements TWMenu {
             return;
         }
         player.openInventory(inventory);
-        player.playSound(player.getLocation(), Sound.CHEST_OPEN, 0.5f, 1f);
+        player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1f);
     }
 
     @Override

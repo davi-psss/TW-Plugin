@@ -51,20 +51,20 @@ public class RanksMenu implements TWMenu {
 
             if (i < currentIndex) {
                 // Ranks já passados (Vidro Verde)
-                inventory.setItem(slot, createItem(Material.STAINED_GLASS_PANE, 5, "§a§l" + rankName, "§7Rank já desbloqueado!"));
+                inventory.setItem(slot, createItem(Material.LIME_STAINED_GLASS_PANE, "§a§l" + rankName, "§7Rank já desbloqueado!"));
             } else if (i == currentIndex) {
                 // Rank Atual (Destaque)
-                inventory.setItem(slot, createItem(Material.EMERALD_BLOCK, 0, "§e§l" + rankName, "§7Este é o teu rank atual."));
+                inventory.setItem(slot, createItem(Material.EMERALD_BLOCK, "§e§l" + rankName, "§7Este é o teu rank atual."));
             } else {
                 // Próximos Ranks (Vidro Vermelho)
                 double cost = TWRanksPlugin.getInstance().getRanksConfig().getDouble("ranks." + rankOrder.get(i - 1) + ".cost");
-                inventory.setItem(slot, createItem(Material.STAINED_GLASS_PANE, 14, "§c§l" + rankName, "§7Custo: §a$" + String.format("%,.2f", cost), "§cBloqueado."));
+                inventory.setItem(slot, createItem(Material.RED_STAINED_GLASS_PANE, "§c§l" + rankName, "§7Custo: §a$" + String.format("%,.2f", cost), "§cBloqueado."));
             }
         }
 
         // Botão de Ação Inferior Central
-        inventory.setItem(49, createItem(Material.EXP_BOTTLE, 0, "§a§lEVOLUIR (RANKUP)", "§7Clica aqui para subir de rank."));
-        inventory.setItem(50, createItem(Material.GOLD_BLOCK, 0, "§e§lEVOLUÇÃO MAX", "§7Clica aqui para dar rankup", "§7o máximo que conseguires."));
+        inventory.setItem(49, createItem(Material.EXPERIENCE_BOTTLE, "§a§lEVOLUIR (RANKUP)", "§7Clica aqui para subir de rank."));
+        inventory.setItem(50, createItem(Material.GOLD_BLOCK, "§e§lEVOLUÇÃO MAX", "§7Clica aqui para dar rankup", "§7o máximo que conseguires."));
     }
 
     @Override
@@ -83,8 +83,8 @@ public class RanksMenu implements TWMenu {
     public Inventory getInventory() { return inventory; }
     public void open() { player.openInventory(inventory); }
 
-    private ItemStack createItem(Material mat, int data, String name, String... lore) {
-        ItemStack item = new ItemStack(mat, 1, (short) data);
+    private ItemStack createItem(Material mat, String name, String... lore) {
+        ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(name);
         meta.setLore(Arrays.asList(lore));

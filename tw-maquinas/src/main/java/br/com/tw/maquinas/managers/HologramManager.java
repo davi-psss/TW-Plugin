@@ -116,10 +116,6 @@ public class HologramManager {
         hologram.stopOrphanCleanup();
     }
 
-    public void destroyForPlayer(org.bukkit.entity.Player player, org.bukkit.World sourceWorld) {
-        hologram.destroyForPlayer(player, sourceWorld);
-    }
-
     public void clearAll() {
         hologram.stopOrphanCleanup();
         hologram.removeAll();

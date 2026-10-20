@@ -10,9 +10,9 @@ import br.com.tw.maquinas.models.MachineType;
 import br.com.tw.maquinas.models.PlacedMachine;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.Effect;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.inventory.ItemStack;
@@ -192,13 +192,13 @@ public class MachineManager {
     private void playMachineEffects(Location loc, String typeId) {
         Location center = loc.clone().add(0.5, 1.0, 0.5);
         if (typeId.equals("NEVE") || typeId.equals("RENA") || typeId.equals("NOEL")) {
-            loc.getWorld().playEffect(center, Effect.SNOW_SHOVEL, 0);
+            loc.getWorld().spawnParticle(Particle.SNOWFLAKE, center, 1);
         } else if (typeId.equals("SINO") || typeId.equals("ESTRELA") || typeId.equals("DUENDE")) {
-            loc.getWorld().playEffect(center, Effect.MAGIC_CRIT, 0);
+            loc.getWorld().spawnParticle(Particle.ENCHANTED_HIT, center, 1);
         } else {
-            loc.getWorld().playEffect(center, Effect.HAPPY_VILLAGER, 0);
+            loc.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, center, 1);
         }
-        loc.getWorld().playSound(center, Sound.CHICKEN_EGG_POP, 0.1f, 0.5f);
+        loc.getWorld().playSound(center, Sound.ENTITY_CHICKEN_EGG, 0.1f, 0.5f);
     }
 
     public boolean hasRequiredRank(String playerRank, String playerPrestige, String requiredRank) {
@@ -240,7 +240,7 @@ public class MachineManager {
     }
 
     public ItemStack createFuelItem(long fuelUnits) {
-        ItemStack item = new ItemStack(Material.COAL, 1, (short) 1);
+        ItemStack item = new ItemStack(Material.CHARCOAL);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(ChatColor.GOLD + "" + ChatColor.BOLD + "Combustível Natalino");
         meta.setLore(Arrays.asList(

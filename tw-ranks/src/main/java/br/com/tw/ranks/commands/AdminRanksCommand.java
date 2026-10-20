@@ -2,6 +2,7 @@ package br.com.tw.ranks.commands;
 
 import br.com.tw.core.TWCorePlugin;
 import br.com.tw.core.data.TWUser;
+import br.com.tw.core.utils.TWLuckPermsGroups;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -38,12 +39,14 @@ public class AdminRanksCommand implements CommandExecutor {
 
         if (args[0].equalsIgnoreCase("setrank")) {
             user.setRankId(valor);
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + target.getName() + " parent set rank_" + valor.toLowerCase());
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + target.getName() + " parent set "
+                    + TWLuckPermsGroups.rank(valor));
             sender.sendMessage(ChatColor.GREEN + "Rank de " + target.getName() + " alterado para " + valor);
 
         } else if (args[0].equalsIgnoreCase("setprestigio")) {
             user.setPrestigeId(valor);
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + target.getName() + " parent add prestigio_" + valor.toLowerCase());
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + target.getName() + " parent add "
+                    + TWLuckPermsGroups.prestige(valor));
             sender.sendMessage(ChatColor.GREEN + "Prestígio de " + target.getName() + " alterado para " + valor);
         }
 

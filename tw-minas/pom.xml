@@ -17,8 +17,8 @@
     <dependencies>
         <!-- Spigot API -->
         <dependency>
-            <groupId>org.spigotmc</groupId>
-            <artifactId>spigot-api</artifactId>
+            <groupId>org.purpurmc.purpur</groupId>
+            <artifactId>purpur-api</artifactId>
             <scope>provided</scope>
         </dependency>
 

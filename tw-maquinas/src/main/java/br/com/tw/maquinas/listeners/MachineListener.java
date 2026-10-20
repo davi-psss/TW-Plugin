@@ -20,7 +20,6 @@ import org.bukkit.event.block.BlockPistonRetractEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.inventory.ItemStack;
@@ -71,15 +70,15 @@ public class MachineListener implements Listener {
 
             TWMaquinasPlugin.getInstance().getHologramManager().updateOrCreateHologram(nearby, type);
 
-            player.setItemInHand(null);
-            player.playSound(player.getLocation(), Sound.ORB_PICKUP, 1f, 1.5f);
+            player.getInventory().setItemInMainHand(null);
+            player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1.5f);
             player.sendMessage(ChatColor.GREEN + "+" + stackToPlace + "x " + type.getDisplayName() +
                     ChatColor.GREEN + " agrupada! Total no stack: " + ChatColor.YELLOW + nearby.getStackAmount() + "x");
             return;
         }
 
         if (hand.getAmount() > 1) {
-            player.setItemInHand(null);
+            player.getInventory().setItemInMainHand(null);
         }
 
         PlacedMachine placed = new PlacedMachine(
@@ -94,7 +93,7 @@ public class MachineListener implements Listener {
         manager.registerMachine(placed);
 
         TWMaquinasPlugin.getInstance().getHologramManager().updateOrCreateHologram(placed, type);
-        player.playSound(block.getLocation(), Sound.ANVIL_LAND, 0.6f, 1.4f);
+        player.playSound(block.getLocation(), Sound.BLOCK_ANVIL_LAND, 0.6f, 1.4f);
         player.sendMessage(ChatColor.GREEN + "Colocaste " + stackToPlace + "x " + type.getDisplayName() + ChatColor.GREEN + "!");
     }
 
@@ -107,7 +106,7 @@ public class MachineListener implements Listener {
         event.setCancelled(true);
 
         Player player = event.getPlayer();
-        player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+        player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
         player.sendMessage(ChatColor.RED + "§lAtenção! §cPara recolheres a máquina, clica nela e usa o botão §4'Recolher' §cno menu.");
     }
 
@@ -123,7 +122,7 @@ public class MachineListener implements Listener {
 
         event.setCancelled(true);
         Player player = event.getPlayer();
-        ItemStack hand = player.getItemInHand();
+        ItemStack hand = player.getInventory().getItemInMainHand();
         if (TWItemTags.has(hand, "tw_crate_effect")) return;
 
         if (hand != null) {
@@ -161,11 +160,11 @@ public class MachineListener implements Listener {
                 if (hand.getAmount() > itemsToConsume) {
                     hand.setAmount(hand.getAmount() - itemsToConsume);
                 } else {
-                    player.setItemInHand(null); // Gastou o pack todo
+                    player.getInventory().setItemInMainHand(null); // Gastou o pack todo
                 }
 
                 player.updateInventory();
-                player.playSound(player.getLocation(), Sound.FIZZ, 1f, 1.5f);
+                player.playSound(player.getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 1f, 1.5f);
                 player.sendMessage(ChatColor.GREEN + "Abasteceste a máquina com +" + totalUnits + " ciclos de combustível!");
                 return;
             }
@@ -208,14 +207,6 @@ public class MachineListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onChunkUnload(ChunkUnloadEvent event) {
         TWMaquinasPlugin.getInstance().getHologramManager().onChunkUnload(event.getChunk());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onWorldChange(PlayerTeleportEvent event) {
-        if (event.getTo() != null && !event.getFrom().getWorld().equals(event.getTo().getWorld())) {
-            TWMaquinasPlugin.getInstance().getHologramManager()
-                    .destroyForPlayer(event.getPlayer(), event.getFrom().getWorld());
-        }
     }
 
     private String getLegacyData(ItemStack item, String prefix) {

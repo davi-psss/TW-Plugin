@@ -43,7 +43,7 @@ public class BoosterCommand implements CommandExecutor {
             Bukkit.broadcastMessage("");
 
             for (Player p : Bukkit.getOnlinePlayers()) {
-                p.playSound(p.getLocation(), Sound.ENDERDRAGON_GROWL, 0.5f, 1.2f);
+                p.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 0.5f, 1.2f);
             }
 
         } catch (NumberFormatException e) {

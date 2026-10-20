@@ -10,6 +10,6 @@ public final class ActionBarUtil {
     }
 
     public static void send(Player player, String message) {
-        TWProtocol.sendActionBar(TWMinasPlugin.getInstance(), player, message);
+        TWProtocol.sendActionBar(player, message);
     }
 }

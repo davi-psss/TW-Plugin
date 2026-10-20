@@ -12,6 +12,7 @@ import br.com.tw.caixas.menus.ManualOpeningMenu;
 import br.com.tw.caixas.model.CrateType;
 import br.com.tw.caixas.model.CrateEffect;
 import br.com.tw.core.TWCorePlugin;
+import br.com.tw.core.utils.TWLuckPermsGroups;
 import br.com.tw.core.data.TWUser;
 import br.com.tw.core.events.TWFarmHarvestEvent;
 import br.com.tw.core.events.TWBlockMinedEvent;
@@ -240,10 +241,10 @@ public final class CrateListener implements Listener {
             return;
         }
         ItemStack consumedSeed = seed.clone();
-        if (seed.getAmount() <= 1) player.setItemInHand(null);
+        if (seed.getAmount() <= 1) player.getInventory().setItemInMainHand(null);
         else {
             seed.setAmount(seed.getAmount() - 1);
-            player.setItemInHand(seed);
+            player.getInventory().setItemInMainHand(seed);
         }
         service.markMutantCrop(crop.getLocationKey(), crop.getOwnerUuid(), success -> {
             if (success) {
@@ -317,7 +318,7 @@ public final class CrateListener implements Listener {
     }
 
     private void applyKillCapsule(Player player, Location location, long kills) {
-        if (location.getBlock().getType() != Material.MOB_SPAWNER) {
+        if (location.getBlock().getType() != Material.SPAWNER) {
             player.sendMessage("§cUsa a cápsula num spawner registado.");
             return;
         }
@@ -425,21 +426,22 @@ public final class CrateListener implements Listener {
         user.setRankId("CARVAO");
         TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
-                "lp user " + player.getName() + " parent add prestigio_" + nextPrestige.toLowerCase(java.util.Locale.ROOT));
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + player.getName() + " parent set rank_carvao");
+                "lp user " + player.getName() + " parent add " + TWLuckPermsGroups.prestige(nextPrestige));
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + player.getName() + " parent set "
+                + TWLuckPermsGroups.rank("CARVAO"));
         consumeHeldItem(player);
-        player.playSound(player.getLocation(), org.bukkit.Sound.ENDERDRAGON_GROWL, 1.0f, 0.8f);
+        player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_ENDER_DRAGON_GROWL, 1.0f, 0.8f);
         player.sendMessage("§dO orbe avançou-te gratuitamente para o prestígio §5" + nextPrestige + "§d.");
         player.sendMessage("§eO teu rank foi resetado para CARVÃO.");
     }
 
     private void consumeHeldItem(Player player) {
-        ItemStack item = player.getItemInHand();
+        ItemStack item = player.getInventory().getItemInMainHand();
         if (item == null) return;
-        if (item.getAmount() <= 1) player.setItemInHand(null);
+        if (item.getAmount() <= 1) player.getInventory().setItemInMainHand(null);
         else {
             item.setAmount(item.getAmount() - 1);
-            player.setItemInHand(item);
+            player.getInventory().setItemInMainHand(item);
         }
         player.updateInventory();
     }

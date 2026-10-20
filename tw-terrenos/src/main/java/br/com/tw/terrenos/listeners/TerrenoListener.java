@@ -26,7 +26,7 @@ public class TerrenoListener implements Listener {
                 // Removemos o dinheiro no momento exato em que ele executa o comando de sucesso
                 if (user.removeBalance(PRECO_TERRENO)) {
                     TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
-                    player.playSound(player.getLocation(), Sound.LEVEL_UP, 1f, 0.5f);
+                    player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 0.5f);
                     player.sendMessage(ChatColor.GREEN + "Pagaste $" + br.com.tw.core.utils.TWFormat.formatarDinheiro(PRECO_TERRENO) + " pela taxa de aquisição do terreno!");
                 }
             }

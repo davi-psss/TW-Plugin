@@ -1,3 +1,8 @@
 name: tw-core
 version: 1.0
+api-version: '26.3'
 main: br.com.tw.core.TWCorePlugin
+permissions:
+  tw.admin:
+    description: Permite administrar os plugins TW
+    default: op

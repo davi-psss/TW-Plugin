@@ -22,7 +22,7 @@ public class ChequeListener implements Listener {
     public void onInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
         if (event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK) {
-            ItemStack item = player.getItemInHand();
+            ItemStack item = player.getInventory().getItemInMainHand();
 
             if (item != null && item.getType() == Material.PAPER && item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
                 if (item.getItemMeta().getDisplayName().equals(ChatColor.GREEN + "§lCheque Bancário")) {
@@ -71,12 +71,12 @@ public class ChequeListener implements Listener {
                     if (item.getAmount() > 1) {
                         item.setAmount(item.getAmount() - 1);
                     } else {
-                        player.setItemInHand(null);
+                        player.getInventory().setItemInMainHand(null);
                     }
                     TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
                     player.updateInventory();
                     player.sendMessage(ChatColor.GREEN + "Resgataste um cheque de $" + String.format("%,.2f", amount) + "!");
-                    player.playSound(player.getLocation(), Sound.LEVEL_UP, 1.0f, 1.5f);
+                    player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.5f);
                 }
             }
         }

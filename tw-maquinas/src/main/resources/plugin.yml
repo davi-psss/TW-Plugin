@@ -1,5 +1,6 @@
 name: tw-maquinas
 version: 1.0
+api-version: '26.3'
 main: br.com.tw.maquinas.TWMaquinasPlugin
 depend: [tw-core, tw-economia]
 commands:

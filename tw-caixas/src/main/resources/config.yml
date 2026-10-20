@@ -49,9 +49,9 @@ crates:
       - {weight: 40, rarity: COMMON, kind: money, min: 50000, max: 300000}
       - {weight: 20, rarity: COMMON, kind: xp, min: 5, max: 10}
       - {weight: 14, rarity: RARE, kind: item, material: SUGAR, display-name: "§aFertilizante de Crescimento Súbito", effect: farm_growth, charges: 1}
-      - {weight: 10, rarity: RARE, kind: item, material: GOLD_HOE, display-name: "§6Foice Dourada", effect: golden_scythe, charges: 2500}
+      - {weight: 10, rarity: RARE, kind: item, material: GOLDEN_HOE, display-name: "§6Foice Dourada", effect: golden_scythe, charges: 2500}
       - {weight: 15, rarity: RARE, kind: item, material: PRISMARINE_SHARD, display-name: "§aFragmento da Natureza"}
-      - {weight: 1, rarity: LEGENDARY, kind: item, material: SAPLING, display-name: "§dSemente Mutante", effect: mutant_seed, charges: 1}
+      - {weight: 1, rarity: LEGENDARY, kind: item, material: OAK_SAPLING, display-name: "§dSemente Mutante", effect: mutant_seed, charges: 1}
   divina:
     name: "§dCaixa Divina"
     icon: ENCHANTED_BOOK

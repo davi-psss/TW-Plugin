@@ -56,17 +56,26 @@ public class TWEconomiaPlugin extends JavaPlugin {
         return chequeRepository;
     }
 
-    public double getBlockPrice(Material material, byte data) {
-        String specificPath = "prices." + material.name() + ":" + data;
-        if (getConfig().contains(specificPath)) {
-            return requireFiniteAtLeast(specificPath, getConfig().getDouble(specificPath), 0.0);
+    public double getBlockPrice(Material material) {
+        String materialPath = "prices." + material.name();
+        if (getConfig().contains(materialPath)) {
+            return requireFiniteAtLeast(materialPath, getConfig().getDouble(materialPath), 0.0);
         }
 
-        String generalPath = "prices." + material.name();
-        if (getConfig().contains(generalPath)) {
-            return requireFiniteAtLeast(generalPath, getConfig().getDouble(generalPath), 0.0);
+        String[] fallbackPaths = material.name().endsWith("_WOOL")
+                ? new String[]{"prices.ALL_WOOL", "prices.WOOL"}
+                : material.name().endsWith("_LOG")
+                ? new String[]{"prices.ALL_LOGS", "prices.LOG"}
+                : material == Material.TERRACOTTA
+                ? new String[]{"prices.STAINED_CLAY"}
+                : material == Material.PRISMARINE_BRICKS || material == Material.DARK_PRISMARINE
+                ? new String[]{"prices.PRISMARINE"}
+                : new String[0];
+        for (String fallbackPath : fallbackPaths) {
+            if (getConfig().contains(fallbackPath)) {
+                return requireFiniteAtLeast(fallbackPath, getConfig().getDouble(fallbackPath), 0.0);
+            }
         }
-
         return 0.0;
     }
 
@@ -75,7 +84,10 @@ public class TWEconomiaPlugin extends JavaPlugin {
         if (prices == null) throw new IllegalArgumentException("Configuração prices ausente.");
         for (String key : prices.getKeys(false)) {
             String materialName = key.contains(":") ? key.substring(0, key.indexOf(':')) : key;
-            if (Material.matchMaterial(materialName) == null) {
+            if (!materialName.equals("ALL_WOOL") && !materialName.equals("ALL_LOGS")
+                    && !materialName.equals("WOOL") && !materialName.equals("LOG")
+                    && !materialName.equals("STAINED_CLAY")
+                    && Material.matchMaterial(materialName) == null) {
                 throw new IllegalArgumentException("Material inválido em prices." + key + ".");
             }
             requireFiniteAtLeast("prices." + key, prices.getDouble(key, Double.NaN), 0.0);

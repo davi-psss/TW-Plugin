@@ -1,5 +1,6 @@
 name: tw-ranks
 version: 1.0
+api-version: '26.3'
 main: br.com.tw.ranks.TWRanksPlugin
 depend: [tw-core]
 softdepend: [PlaceholderAPI]

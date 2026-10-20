@@ -3,24 +3,22 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
     <groupId>br.com.tw</groupId>
     <artifactId>tw-parent</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <properties>
-        <maven.compiler.release>8</maven.compiler.release>
+        <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <purpur.version>26.3.build.2652-stable</purpur.version>
     </properties>
 
-    <!-- Aqui declaramos os módulos do servidor. -->
     <modules>
         <module>tw-core</module>
         <module>tw-economia</module>
         <module>tw-ranks</module>
         <module>tw-minas</module>
-        <module>tw-lobby</module>
         <module>tw-terrenos</module>
         <module>tw-maquinas</module>
         <module>tw-spawners</module>
@@ -29,25 +27,22 @@
     </modules>
 
     <repositories>
-        <!-- 1. CodeMC (O salvador da pátria para dependências da 1.8.8) -->
+        <!-- Repositório PurpurMC -->
         <repository>
-            <id>codemc-repo</id>
-            <url>https://repo.codemc.io/repository/maven-public/</url>
+            <id>purpurmc</id>
+            <url>https://repo.purpurmc.org/snapshots/</url>
         </repository>
-
-        <!-- Spigot Repo -->
+        <!-- Repositório PaperMC (Dependências upstream) -->
         <repository>
-            <id>spigot-repo</id>
-            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+            <id>papermc</id>
+            <url>https://repo.papermc.io/repository/maven-public/</url>
         </repository>
-
-        <!-- PlaceholderAPI Repo -->
+        <!-- PlaceholderAPI -->
         <repository>
             <id>placeholderapi</id>
             <url>https://repo.extendedclip.com/releases/</url>
         </repository>
-
-        <!-- Vault Repo -->
+        <!-- JitPack (Vault) -->
         <repository>
             <id>jitpack.io</id>
             <url>https://jitpack.io</url>
@@ -56,29 +51,13 @@
 
     <dependencyManagement>
         <dependencies>
-            <!-- Spigot API -->
+            <!-- Purpur API Nativa -->
             <dependency>
-                <groupId>org.spigotmc</groupId>
-                <artifactId>spigot-api</artifactId>
-                <version>1.8.8-R0.1-SNAPSHOT</version>
-                <scope>provided</scope>
-                <!-- EXCLUI O ARQUIVO QUEBRADO -->
-                <exclusions>
-                    <exclusion>
-                        <groupId>net.md-5</groupId>
-                        <artifactId>bungeecord-chat</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
-
-            <!-- FORÇA O USO DE UMA VERSÃO MAIS RECENTE QUE EXISTE (É 100% retrocompatível) -->
-            <dependency>
-                <groupId>net.md-5</groupId>
-                <artifactId>bungeecord-chat</artifactId>
-                <version>1.16-R0.4</version>
+                <groupId>org.purpurmc.purpur</groupId>
+                <artifactId>purpur-api</artifactId>
+                <version>${purpur.version}</version>
                 <scope>provided</scope>
             </dependency>
-
             <!-- Vault -->
             <dependency>
                 <groupId>com.github.MilkBowl</groupId>
@@ -86,15 +65,13 @@
                 <version>1.7</version>
                 <scope>provided</scope>
             </dependency>
-
-            <!-- HikariCP -->
+            <!-- HikariCP 5+ (Obrigatório para Java 25) -->
             <dependency>
                 <groupId>com.zaxxer</groupId>
                 <artifactId>HikariCP</artifactId>
-                <version>4.0.3</version>
+                <version>5.1.0</version>
                 <scope>compile</scope>
             </dependency>
-
             <!-- PostgreSQL JDBC -->
             <dependency>
                 <groupId>org.postgresql</groupId>
@@ -110,43 +87,11 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.14.1</version>
+                <version>3.15.0</version>
                 <configuration>
                     <release>${maven.compiler.release}</release>
                 </configuration>
             </plugin>
         </plugins>
     </build>
-
-    <profiles>
-        <profile>
-            <id>deploy-local</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-antrun-plugin</artifactId>
-                        <version>1.8</version>
-                        <inherited>false</inherited>
-                        <configuration>
-                            <target>
-                                <fail unless="tw.deploy.dir"
-                                       message="Informe -Dtw.deploy.dir com o caminho para a pasta plugins do servidor." />
-                                <available file="${tw.deploy.dir}" type="dir" property="tw.deploy.dir.exists" />
-                                <fail unless="tw.deploy.dir.exists"
-                                       message="A pasta de destino do deploy não existe: ${tw.deploy.dir}" />
-                                <echo message="[TW-DEPLOY] Copiando plugins para ${tw.deploy.dir}" />
-                                <copy todir="${tw.deploy.dir}" overwrite="true" verbose="true">
-                                    <fileset dir="${project.basedir}">
-                                        <include name="tw-*/target/tw-*-${project.version}.jar" />
-                                    </fileset>
-                                    <flattenmapper />
-                                </copy>
-                            </target>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 </project>

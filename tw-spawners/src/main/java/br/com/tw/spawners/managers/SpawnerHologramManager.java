@@ -120,10 +120,6 @@ public class SpawnerHologramManager {
         hologram.stopOrphanCleanup();
     }
 
-    public void destroyForPlayer(Player player, World sourceWorld) {
-        hologram.destroyForPlayer(player, sourceWorld);
-    }
-
     public void clearAll() {
         hologram.stopOrphanCleanup();
         hologram.removeAll();

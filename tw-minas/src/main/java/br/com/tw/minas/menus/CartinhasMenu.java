@@ -54,7 +54,7 @@ public class CartinhasMenu implements TWMenu {
                 CartinhasManager.MissionSlot m = missions.get(i);
                 boolean done = m.isCompleted();
 
-                ItemStack paper = new ItemStack(done ? Material.EMPTY_MAP : Material.PAPER);
+                ItemStack paper = new ItemStack(done ? Material.MAP : Material.PAPER);
                 ItemMeta meta = paper.getItemMeta();
                 meta.setDisplayName(cardNames[i]);
 
@@ -72,7 +72,7 @@ public class CartinhasMenu implements TWMenu {
                 ));
 
                 if (done) {
-                    meta.addEnchant(Enchantment.DURABILITY, 1, true);
+                    meta.addEnchant(Enchantment.UNBREAKING, 1, true);
                     meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
                 }
 
@@ -81,7 +81,7 @@ public class CartinhasMenu implements TWMenu {
             }
         }
 
-        ItemStack back = new ItemStack(Material.WOOD_DOOR);
+        ItemStack back = new ItemStack(Material.OAK_DOOR);
         ItemMeta bMeta = back.getItemMeta();
         bMeta.setDisplayName("§cVoltar");
         bMeta.setLore(Arrays.asList("§7Retornar à Central."));
@@ -106,7 +106,7 @@ public class CartinhasMenu implements TWMenu {
         int slot = event.getSlot();
 
         if (slot == 31) {
-            player.playSound(player.getLocation(), Sound.CLICK, 1f, 1f);
+            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             new MinaMainMenu(player).open();
             return;
         }
@@ -127,10 +127,6 @@ public class CartinhasMenu implements TWMenu {
     public void open() { player.openInventory(inventory); }
 
     private ItemStack createGlass(int data) {
-        ItemStack item = new ItemStack(Material.STAINED_GLASS_PANE, 1, (short) data);
-        ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(" ");
-        item.setItemMeta(meta);
-        return item;
+        return TWMenuFrame.stainedGlassPane(data);
     }
 }

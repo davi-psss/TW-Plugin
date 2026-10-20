@@ -25,7 +25,7 @@ public class ComboManager {
                     if (now > entry.getValue()) {
                         Player p = Bukkit.getPlayer(uuid);
                         if (p != null && p.isOnline()) {
-                            p.playSound(p.getLocation(), Sound.GLASS, 1f, 0.5f);
+                            p.playSound(p.getLocation(), Sound.BLOCK_GLASS_BREAK, 1f, 0.5f);
                             p.sendMessage("§c§lCOMBO PERDIDO! §7Demoraste muito tempo para quebrar outro bloco.");
                         }
                         combos.remove(uuid);

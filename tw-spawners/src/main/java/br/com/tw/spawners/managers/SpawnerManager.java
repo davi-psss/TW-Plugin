@@ -13,9 +13,9 @@ import br.com.tw.spawners.models.PlacedSpawner;
 import br.com.tw.spawners.models.SpawnerType;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.Effect;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Entity;
@@ -242,8 +242,8 @@ public class SpawnerManager {
 
     private void playVirtualEffects(Location loc, SpawnerType type) {
         Location center = loc.clone().add(0.5, 1.0, 0.5);
-        loc.getWorld().playEffect(center, Effect.LAVA_POP, 0);
-        loc.getWorld().playSound(center, Sound.ORB_PICKUP, 0.05f, 1.5f);
+        loc.getWorld().spawnParticle(Particle.LAVA, center, 1);
+        loc.getWorld().playSound(center, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.05f, 1.5f);
     }
 
     public void spawnOrStackEntity(Location spawnerLoc, SpawnerType type, long amountToAdd, int lootLevel) {
@@ -267,8 +267,8 @@ public class SpawnerManager {
         LivingEntity entity = (LivingEntity) spawnPoint.getWorld().spawnEntity(spawnPoint, type.getEntityType());
         entity.setRemoveWhenFarAway(true);
         entity.setCanPickupItems(false);
-        entity.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, Integer.MAX_VALUE, 250, false, false));
-        entity.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, Integer.MAX_VALUE, 250, false, false));
+        entity.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, Integer.MAX_VALUE, 250, false, false));
+        entity.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST, Integer.MAX_VALUE, 250, false, false));
         updateEntityStack(entity, type, amountToAdd, lootLevel, spawnPoint);
     }
 
@@ -308,7 +308,7 @@ public class SpawnerManager {
 
     // O gerador real de Itens com os dados ocultos
     private ItemStack createSpawnerItem(SpawnerType type, long amount, int speed, int loot, int amtLvl, boolean autoSell) {
-        ItemStack item = new ItemStack(Material.MOB_SPAWNER, 1);
+        ItemStack item = new ItemStack(Material.SPAWNER, 1);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(type.getDisplayName());
 

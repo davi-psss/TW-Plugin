@@ -3,6 +3,7 @@ package br.com.tw.ranks.commands;
 import br.com.tw.core.TWCorePlugin;
 import br.com.tw.core.data.TWUser;
 import br.com.tw.core.utils.TWFormat;
+import br.com.tw.core.utils.TWLuckPermsGroups;
 import br.com.tw.ranks.TWRanksPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -62,7 +63,8 @@ public class RankupCommand implements CommandExecutor {
                 user.setRankId(nextRank);
 
                 // Sincronização com o LuckPerms
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + player.getName() + " parent set rank_" + nextRank.toLowerCase());
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + player.getName() + " parent set "
+                        + TWLuckPermsGroups.rank(nextRank));
 
                 // Salva no banco de dados de forma assíncrona
                 TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
@@ -82,7 +84,7 @@ public class RankupCommand implements CommandExecutor {
                 } else {
                     player.sendMessage(ChatColor.GREEN + "Evoluíste para o Rank " + ChatColor.YELLOW + ChatColor.BOLD + nextRank + ChatColor.GREEN + "!");
                 }
-                player.playSound(player.getLocation(), Sound.LEVEL_UP, 1.0f, 0.8f);
+                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 0.8f);
             } else {
                 player.sendMessage(ChatColor.RED + "Erro na transação. Contacta um Administrador.");
             }

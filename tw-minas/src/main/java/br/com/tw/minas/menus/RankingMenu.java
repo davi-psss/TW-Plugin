@@ -37,7 +37,7 @@ public class RankingMenu implements TWMenu {
         inventory.setItem(11, createLoadingSkull("§e§l1º Lugar"));
         inventory.setItem(13, createLoadingSkull("§f§l2º Lugar"));
         inventory.setItem(15, createLoadingSkull("§6§l3º Lugar"));
-        inventory.setItem(31, createItem(Material.WOOD_DOOR, "§cVoltar", "§7Retornar à Central."));
+        inventory.setItem(31, createItem(Material.OAK_DOOR, "§cVoltar", "§7Retornar à Central."));
         TWMenuFrame.apply(inventory);
     }
 
@@ -76,7 +76,7 @@ public class RankingMenu implements TWMenu {
     public void onClick(InventoryClickEvent event) {
         int slot = event.getSlot();
         if (slot == 31) {
-            player.playSound(player.getLocation(), Sound.CLICK, 1f, 1f);
+            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
             new MinaMainMenu(player).open();
         }
     }
@@ -98,7 +98,7 @@ public class RankingMenu implements TWMenu {
     }
 
     private ItemStack createLoadingSkull(String titulo) {
-        ItemStack skull = new ItemStack(Material.SKULL_ITEM, 1, (short) 3);
+        ItemStack skull = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) skull.getItemMeta();
         meta.setDisplayName(titulo);
         meta.setLore(Arrays.asList("§7A consultar o Banco de Dados..."));
@@ -107,7 +107,7 @@ public class RankingMenu implements TWMenu {
     }
 
     private ItemStack getPlayerSkull(String playerName, String titulo, String... lore) {
-        ItemStack skull = new ItemStack(Material.SKULL_ITEM, 1, (short) 3);
+        ItemStack skull = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) skull.getItemMeta();
         meta.setOwner(playerName);
         meta.setDisplayName(titulo + " §7- §a" + playerName);

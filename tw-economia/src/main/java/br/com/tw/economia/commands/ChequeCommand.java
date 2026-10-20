@@ -72,7 +72,7 @@ public class ChequeCommand implements CommandExecutor {
                     }
                     TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
                     player.sendMessage(ChatColor.GREEN + "Criaste um cheque de $" + String.format("%,.2f", amount) + ".");
-                    player.playSound(player.getLocation(), Sound.ORB_PICKUP, 1.0f, 1.0f);
+                    player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
                 } else {
                     player.sendMessage(ChatColor.RED + "Não tens saldo suficiente.");
                 }

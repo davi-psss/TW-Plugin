@@ -3,20 +3,15 @@ package br.com.tw.ranks.listeners;
 import br.com.tw.core.TWCorePlugin;
 import br.com.tw.core.data.TWUser;
 import br.com.tw.core.utils.TWFormat;
-import br.com.tw.core.utils.TWProtocol;
 import br.com.tw.ranks.TWRanksPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -26,7 +21,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.logging.Level;
 
 public class JoinTagListener {
 
@@ -98,7 +92,7 @@ public class JoinTagListener {
         TWUser user = TWCorePlugin.getInstance().getUserManager().getUser(viewer.getUniqueId());
         String content = createHeaderFooter(viewer, user);
         if (!content.equals(lastHeaderFooters.get(viewer.getUniqueId()))) {
-            TabHeaderFooter.send(viewer, content, plugin);
+            TabHeaderFooter.send(viewer, content);
             lastHeaderFooters.put(viewer.getUniqueId(), content);
         }
     }
@@ -204,75 +198,11 @@ public class JoinTagListener {
     }
 
     private static final class TabHeaderFooter {
-        private static final Constructor<?> packetConstructor;
-        private static final Method serializerMethod;
-        private static final Field headerField;
-        private static final Field footerField;
-        private static boolean available;
-        private static boolean failureLogged;
-
-        static {
-            Class<?> loadedPacketClass = null;
-            Class<?> loadedComponentClass = null;
-            Class<?> loadedSerializerClass = null;
-            Constructor<?> loadedPacketConstructor = null;
-            Method loadedSerializerMethod = null;
-            Field loadedHeaderField = null;
-            Field loadedFooterField = null;
-            try {
-                String nms = TWProtocol.getNmsPackage();
-                loadedPacketClass = Class.forName(nms + "PacketPlayOutPlayerListHeaderFooter");
-                loadedComponentClass = Class.forName(nms + "IChatBaseComponent");
-                loadedSerializerClass = Class.forName(nms + "IChatBaseComponent$ChatSerializer");
-                loadedPacketConstructor = loadedPacketClass.getConstructor();
-                loadedSerializerMethod = loadedSerializerClass.getMethod("a", String.class);
-                for (Field field : loadedPacketClass.getDeclaredFields()) {
-                    if (field.getType() == loadedComponentClass) {
-                        field.setAccessible(true);
-                        if (loadedHeaderField == null) loadedHeaderField = field;
-                        else {
-                            loadedFooterField = field;
-                            break;
-                        }
-                    }
-                }
-                if (loadedHeaderField == null || loadedFooterField == null) {
-                    throw new NoSuchFieldException("Não foi possível localizar os campos de cabeçalho e rodapé do TAB.");
-                }
-            } catch (ReflectiveOperationException | SecurityException e) {
-                Bukkit.getLogger().log(Level.SEVERE, "Falha ao preparar o cabeçalho e rodapé do TAB.", e);
-            }
-            packetConstructor = loadedPacketConstructor;
-            serializerMethod = loadedSerializerMethod;
-            headerField = loadedHeaderField;
-            footerField = loadedFooterField;
-            available = packetConstructor != null && serializerMethod != null
-                    && headerField != null && footerField != null;
-        }
-
-        private static void send(Player player, String content, JavaPlugin plugin) {
-            if (!available) return;
-            try {
-                int separator = content.indexOf("\n§7Online:");
-                String header = separator < 0 ? content : content.substring(0, separator);
-                String footer = separator < 0 ? "" : content.substring(separator + 1);
-                Object packet = packetConstructor.newInstance();
-                headerField.set(packet, createComponent(header));
-                footerField.set(packet, createComponent(footer));
-                TWProtocol.sendPacket(plugin, player, packet);
-            } catch (ReflectiveOperationException | IllegalArgumentException e) {
-                if (!failureLogged) {
-                    plugin.getLogger().log(Level.SEVERE, "Falha ao enviar o cabeçalho e rodapé do TAB.", e);
-                    failureLogged = true;
-                }
-                available = false;
-            }
-        }
-
-        private static Object createComponent(String text) throws ReflectiveOperationException {
-            String json = "{\"text\":\"" + text.replace("\\", "\\\\")
-                    .replace("\"", "\\\"").replace("\n", "\\n") + "\"}";
-            return serializerMethod.invoke(null, json);
+        private static void send(Player player, String content) {
+            int separator = content.indexOf("\n§7Online:");
+            String header = separator < 0 ? content : content.substring(0, separator);
+            String footer = separator < 0 ? "" : content.substring(separator + 1);
+            player.setPlayerListHeaderFooter(header, footer);
         }
     }
 }

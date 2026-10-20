@@ -43,4 +43,4 @@ Os restantes consumíveis são aplicados diretamente no alvo indicado pela lore:
 
 ## Compatibilidade
 
-Os artefatos são compilados para Java 8 e destinados ao servidor Spigot/Paper 1.8.8. Teste os JARs em uma cópia do servidor antes de atualizar produção; APIs NMS e o protocolo visual não são portáveis para versões arbitrárias.
+Os artefatos são compilados com Java 25 e destinados ao Purpur 26.3. Teste os JARs em uma cópia desse servidor antes de atualizar produção; os `plugin.yml` exigem API 26.3.

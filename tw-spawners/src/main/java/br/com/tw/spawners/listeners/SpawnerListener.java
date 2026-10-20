@@ -34,7 +34,6 @@ import org.bukkit.event.entity.SpawnerSpawnEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.inventory.ItemStack;
@@ -77,7 +76,7 @@ public class SpawnerListener implements Listener {
                 Bukkit.getScheduler().runTask(TWSpawnersPlugin.getInstance(), () -> {
                     if (!player.isOnline()) return;
                     if (player.getInventory().firstEmpty() == -1) {
-                        player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+                        player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                         player.sendMessage(ChatColor.RED + "O teu inventário está cheio!");
                         return;
                     }
@@ -131,11 +130,11 @@ public class SpawnerListener implements Listener {
                 return;
             }
             TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
-            player.playSound(player.getLocation(), Sound.LEVEL_UP, 1f, 1.5f);
+            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.5f);
             player.sendMessage(ChatColor.GREEN + "Compraste " + amount + "x " + type.getDisplayName()
                     + ChatColor.GREEN + " por $" + TWFormat.formatarDinheiro(totalCost) + "!");
         } else {
-            player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
             player.sendMessage(ChatColor.RED + "Faltam $" + TWFormat.formatarDinheiro(totalCost - user.getBalance()) + ".");
         }
     }
@@ -199,14 +198,14 @@ public class SpawnerListener implements Listener {
             manager.saveSpawnerAsync(nearby);
             TWSpawnersPlugin.getInstance().getHologramManager().updateOrCreateHologram(nearby, type);
 
-            player.setItemInHand(null);
-            player.playSound(player.getLocation(), Sound.ORB_PICKUP, 1f, 1.5f);
+            player.getInventory().setItemInMainHand(null);
+            player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1.5f);
             player.sendMessage(ChatColor.GREEN + "+" + stackToPlace + "x " + type.getDisplayName() +
                     ChatColor.GREEN + " agrupado! Total: " + ChatColor.YELLOW + nearby.getStackAmount() + "x");
             return;
         }
 
-        if (hand.getAmount() > 1) player.setItemInHand(null);
+        if (hand.getAmount() > 1) player.getInventory().setItemInMainHand(null);
 
         PlacedSpawner placed = new PlacedSpawner(
                 PlacedSpawner.toKey(block.getLocation()), player.getUniqueId(), player.getName(), typeId, stackToPlace
@@ -221,7 +220,7 @@ public class SpawnerListener implements Listener {
         manager.registerSpawner(placed);
 
         TWSpawnersPlugin.getInstance().getHologramManager().updateOrCreateHologram(placed, type);
-        player.playSound(block.getLocation(), Sound.ANVIL_LAND, 0.7f, 1.2f);
+        player.playSound(block.getLocation(), Sound.BLOCK_ANVIL_LAND, 0.7f, 1.2f);
         player.sendMessage(ChatColor.GREEN + "Colocaste " + stackToPlace + "x " + type.getDisplayName() + ChatColor.GREEN + "!");
     }
 
@@ -230,14 +229,14 @@ public class SpawnerListener implements Listener {
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
 
         Block b = event.getClickedBlock();
-        if (b == null || b.getType() != Material.MOB_SPAWNER) return;
+        if (b == null || b.getType() != Material.SPAWNER) return;
 
         PlacedSpawner spawner = manager.getSpawnerAt(b.getLocation());
         if (spawner == null) return;
 
         event.setCancelled(true);
         Player player = event.getPlayer();
-        ItemStack hand = player.getItemInHand();
+        ItemStack hand = player.getInventory().getItemInMainHand();
         if (TWItemTags.has(hand, "tw_crate_effect")
                 && !"free_spawner_upgrade".equals(TWItemTags.getString(hand, "tw_crate_effect"))) return;
         if (hand != null) {
@@ -255,11 +254,11 @@ public class SpawnerListener implements Listener {
                 else spawner.upgradeSpeedLevel();
                 manager.saveSpawnerAsync(spawner);
                 if (charges == 1) {
-                    player.setItemInHand(null);
+                    player.getInventory().setItemInMainHand(null);
                 } else {
                     java.util.Map<String, Object> tags = new java.util.HashMap<>();
                     tags.put("tw_crate_charges", charges - 1);
-                    player.setItemInHand(TWItemTags.set(hand, tags));
+                    player.getInventory().setItemInMainHand(TWItemTags.set(hand, tags));
                 }
                 player.sendMessage(player.isSneaking()
                         ? "§aTalismã aplicado: melhoria de loot grátis."
@@ -296,10 +295,10 @@ public class SpawnerListener implements Listener {
                 if (type != null) TWSpawnersPlugin.getInstance().getHologramManager().updateOrCreateHologram(spawner, type);
 
                 if (hand.getAmount() > 1) hand.setAmount(hand.getAmount() - 1);
-                else player.setItemInHand(null);
+                else player.getInventory().setItemInMainHand(null);
 
                 player.updateInventory();
-                player.playSound(player.getLocation(), Sound.LEVEL_UP, 1f, 2.0f);
+                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 2.0f);
                 player.sendMessage("§b🔥 Aplicaste um Booster de " + multiplier + "x por " + minutes + " Minutos no spawner!");
                 return;
             }
@@ -310,7 +309,7 @@ public class SpawnerListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onBreak(BlockBreakEvent event) {
-        if (event.getBlock().getType() != Material.MOB_SPAWNER) return;
+        if (event.getBlock().getType() != Material.SPAWNER) return;
         if (manager.getSpawnerAt(event.getBlock().getLocation()) != null) {
             event.setCancelled(true);
             event.getPlayer().sendMessage(ChatColor.RED + "§lAtenção! §cPara desmontares o spawner, abre o painel dele e clica no botão §4'Desmontar'§c.");
@@ -368,7 +367,7 @@ public class SpawnerListener implements Listener {
         if (killer != null) {
             TWUser user = TWCorePlugin.getInstance().getUserManager().getUser(killer.getUniqueId());
             if (user != null) {
-                int lootingEnchantLvl = killer.getItemInHand() != null ? killer.getItemInHand().getEnchantmentLevel(Enchantment.LOOT_BONUS_MOBS) : 0;
+                int lootingEnchantLvl = killer.getInventory().getItemInMainHand() != null ? killer.getInventory().getItemInMainHand().getEnchantmentLevel(Enchantment.LOOTING) : 0;
 
                 double swordLootingBonus = 1.0 + (lootingEnchantLvl * 0.15);
                 double spawnerLootBonus = 1.0 + ((lootLevel - 1) * 0.10);
@@ -415,7 +414,7 @@ public class SpawnerListener implements Listener {
                     }
                 }
 
-                killer.playSound(killer.getLocation(), Sound.ORB_PICKUP, 0.4f, 1.8f);
+                killer.playSound(killer.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.4f, 1.8f);
 
                 try {
                     Class<?> actionClass = Class.forName("br.com.tw.minas.utils.ActionBarUtil");
@@ -430,8 +429,8 @@ public class SpawnerListener implements Listener {
         if (remaining > 0) {
             LivingEntity next = (LivingEntity) entity.getWorld().spawnEntity(anchor, type.getEntityType());
             next.setRemoveWhenFarAway(true); next.setCanPickupItems(false);
-            next.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, Integer.MAX_VALUE, 250, false, false));
-            next.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, Integer.MAX_VALUE, 250, false, false));
+            next.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, Integer.MAX_VALUE, 250, false, false));
+            next.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST, Integer.MAX_VALUE, 250, false, false));
             manager.updateEntityStack(next, type, remaining, lootLevel, anchor);
         }
     }
@@ -460,14 +459,6 @@ public class SpawnerListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onChunkUnload(ChunkUnloadEvent event) {
         TWSpawnersPlugin.getInstance().getHologramManager().onChunkUnload(event.getChunk());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onWorldChange(PlayerTeleportEvent event) {
-        if (event.getTo() != null && !event.getFrom().getWorld().equals(event.getTo().getWorld())) {
-            TWSpawnersPlugin.getInstance().getHologramManager()
-                    .destroyForPlayer(event.getPlayer(), event.getFrom().getWorld());
-        }
     }
 
     private String getLegacyData(ItemStack item, String prefix) {

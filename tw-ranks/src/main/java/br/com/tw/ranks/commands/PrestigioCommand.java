@@ -2,6 +2,7 @@ package br.com.tw.ranks.commands;
 
 import br.com.tw.core.TWCorePlugin;
 import br.com.tw.core.data.TWUser;
+import br.com.tw.core.utils.TWLuckPermsGroups;
 import br.com.tw.ranks.TWRanksPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -70,12 +71,14 @@ public class PrestigioCommand implements CommandExecutor {
                 TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
 
                 // Atualiza o LuckPerms
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + player.getName() + " parent add prestigio_" + nextPrestige.toLowerCase());
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + player.getName() + " parent set rank_carvao");
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + player.getName() + " parent add "
+                        + TWLuckPermsGroups.prestige(nextPrestige));
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + player.getName() + " parent set "
+                        + TWLuckPermsGroups.rank("CARVAO"));
 
                 player.sendMessage(ChatColor.GREEN + "Evoluíste para o Prestígio " + ChatColor.GOLD + ChatColor.BOLD + nextPrestige + ChatColor.GREEN + "!");
                 player.sendMessage(ChatColor.YELLOW + "O teu Rank foi resetado para CARVÃO.");
-                player.playSound(player.getLocation(), Sound.ENDERDRAGON_GROWL, 1.0f, 0.8f);
+                player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 1.0f, 0.8f);
             } else {
                 player.sendMessage(ChatColor.RED + "Erro na transação. Contacta um Administrador.");
             }

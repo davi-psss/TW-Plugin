@@ -42,10 +42,7 @@ public class MachinePanelMenu implements TWMenu {
 
     private void setupItems() {
         for (int i = 0; i < 45; i++) {
-            ItemStack glass = new ItemStack(Material.STAINED_GLASS_PANE, 1, (short) 15);
-            ItemMeta gMeta = glass.getItemMeta();
-            gMeta.setDisplayName(" ");
-            glass.setItemMeta(gMeta);
+            ItemStack glass = TWMenuFrame.stainedGlassPane(15);
             inventory.setItem(i, glass);
         }
         TWMenuFrame.apply(inventory);
@@ -160,7 +157,7 @@ public class MachinePanelMenu implements TWMenu {
         if (slot == 11) {
             double baseStored = machine.getStoredEarnings();
             if (baseStored <= 0) {
-                player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+                player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 player.sendMessage(ChatColor.RED + "Esta máquina ainda não tem recursos acumulados.");
                 return;
             }
@@ -176,7 +173,7 @@ public class MachinePanelMenu implements TWMenu {
             user.addBalance(finalPayout);
             TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
 
-            player.playSound(player.getLocation(), Sound.ORB_PICKUP, 1f, 1.5f);
+            player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1.5f);
 
             try {
                 Class<?> actionClass = Class.forName("br.com.tw.minas.utils.ActionBarUtil");
@@ -217,7 +214,7 @@ public class MachinePanelMenu implements TWMenu {
         }
         else if (slot == 40) {
             if (player.getInventory().firstEmpty() == -1) {
-                player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+                player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 player.sendMessage(ChatColor.RED + "O teu inventário está cheio!");
                 return;
             }
@@ -231,7 +228,7 @@ public class MachinePanelMenu implements TWMenu {
 
             manager.removeMachine(loc);
 
-            player.playSound(player.getLocation(), Sound.ITEM_PICKUP, 1f, 1f);
+            player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1f, 1f);
             player.sendMessage(ChatColor.YELLOW + "Desmontaste a máquina com sucesso!");
         }
     }
@@ -241,13 +238,13 @@ public class MachinePanelMenu implements TWMenu {
         TWMaquinasPlugin.getInstance().getHologramManager().updateOrCreateHologram(machine, type);
         TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
 
-        player.playSound(player.getLocation(), Sound.ANVIL_USE, 1f, 1.5f);
+        player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_USE, 1f, 1.5f);
         player.sendMessage(ChatColor.GREEN + "Atributo da máquina evoluído com sucesso!");
         setupItems();
     }
 
     private void sendTokenError(long cost) {
-        player.playSound(player.getLocation(), Sound.VILLAGER_NO, 1f, 1f);
+        player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
         player.sendMessage(ChatColor.RED + "Não tens Tokens suficientes! Precisas de " + TWFormat.formatarDinheiro(cost) + " Tokens.");
     }
 
@@ -256,6 +253,6 @@ public class MachinePanelMenu implements TWMenu {
 
     public void open() {
         player.openInventory(inventory);
-        player.playSound(player.getLocation(), Sound.CHEST_OPEN, 0.5f, 1f);
+        player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1f);
     }
 }

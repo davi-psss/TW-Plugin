@@ -10,6 +10,6 @@ public final class SpawnerActionBarUtil {
     }
 
     public static void send(Player player, String message) {
-        TWProtocol.sendActionBar(TWSpawnersPlugin.getInstance(), player, message);
+        TWProtocol.sendActionBar(player, message);
     }
 }

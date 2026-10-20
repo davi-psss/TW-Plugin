@@ -1,12 +1,9 @@
 name: tw-farms
 version: 1.0
+api-version: '26.3'
 main: br.com.tw.farms.TWFarmsPlugin
 depend: [tw-core, tw-economia, tw-spawners]
 commands:
   farm:
     description: Abre a loja e a gestão de plantações
     aliases: [farms]
-permissions:
-  tw.admin:
-    description: Permite administrar farms de outros jogadores
-    default: op

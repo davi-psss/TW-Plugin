@@ -6,6 +6,7 @@ import br.com.tw.caixas.managers.CrateService;
 import br.com.tw.caixas.model.CrateReward;
 import br.com.tw.caixas.model.CrateType;
 import br.com.tw.core.menus.TWMenu;
+import br.com.tw.core.utils.TWMenuFrame;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -89,7 +90,7 @@ public final class ManualOpeningMenu implements TWMenu {
 
         CrateReward preview = service.getCatalog().get(type).draw();
         inventory.setItem(REWARD_SLOT, CrateMenuItems.rewardIcon(preview, preview.rollAmount(), false));
-        player.playSound(player.getLocation(), Sound.CLICK, 0.3F, 1.2F + ThreadLocalRandom.current().nextFloat());
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.3F, 1.2F + ThreadLocalRandom.current().nextFloat());
     }
 
     private void complete(Player player) {
@@ -99,7 +100,7 @@ public final class ManualOpeningMenu implements TWMenu {
         openings.completeManual(playerId, openingId, type, player, grant -> {
             inventory.setItem(REWARD_SLOT, CrateMenuItems.rewardIcon(
                     grant.getReward(), grant.getAmount(), grant.isCritical()));
-            player.playSound(player.getLocation(), Sound.LEVEL_UP, 1.0F, 1.2F);
+            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0F, 1.2F);
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (player.isOnline()
                         && player.getOpenInventory().getTopInventory().getHolder() == this) {
@@ -121,11 +122,7 @@ public final class ManualOpeningMenu implements TWMenu {
     private void fillBackground() {
         for (int slot = 0; slot < inventory.getSize(); slot++) {
             if (slot == REWARD_SLOT) continue;
-            ItemStack pane = new ItemStack(Material.STAINED_GLASS_PANE, 1,
-                    (short) (slot % 2 == 0 ? 15 : 7));
-            ItemMeta meta = pane.getItemMeta();
-            meta.setDisplayName(" ");
-            pane.setItemMeta(meta);
+            ItemStack pane = TWMenuFrame.stainedGlassPane(slot % 2 == 0 ? 15 : 7);
             inventory.setItem(slot, pane);
         }
     }

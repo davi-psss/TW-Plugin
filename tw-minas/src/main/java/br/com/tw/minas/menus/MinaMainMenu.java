@@ -40,7 +40,7 @@ public class MinaMainMenu implements TWMenu {
         inventory.setItem(4, createItem(Material.BEACON, "§b§lMeta Comunitária (Happy Hour)",
                 "§7Progresso Global: " + statusHappyHour));
 
-        inventory.setItem(11, createItem(Material.EMPTY_MAP, "§d§lCartinhas de Missões",
+        inventory.setItem(11, createItem(Material.MAP, "§d§lCartinhas de Missões",
                 "§7Cumpre missões aleatórias na mina por grandes prémios!"));
         inventory.setItem(12, createItem(Material.CHEST, "§6§lCatálogo de Minas",
                 "§7Explore todas as minas do servidor."));
@@ -60,7 +60,7 @@ public class MinaMainMenu implements TWMenu {
 
         if (slot == 13) {
             player.closeInventory();
-            player.playSound(player.getLocation(), Sound.ENDERMAN_TELEPORT, 1f, 1f);
+            player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
             player.sendMessage(ChatColor.AQUA + "A teleportar para a tua melhor mina...");
 
             TWUser user = TWCorePlugin.getInstance().getUserManager().getUser(player.getUniqueId());
@@ -69,16 +69,16 @@ public class MinaMainMenu implements TWMenu {
 
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "warp " + warpName + " " + player.getName());
         } else if (slot == 11) {
-            player.playSound(player.getLocation(), Sound.BAT_TAKEOFF, 0.5f, 1.5f);
+            player.playSound(player.getLocation(), Sound.ENTITY_BAT_TAKEOFF, 0.5f, 1.5f);
             new CartinhasMenu(player).open();
         } else if (slot == 12) {
-            player.playSound(player.getLocation(), Sound.CHEST_OPEN, 1f, 2f);
+            player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 1f, 2f);
             new CatalogoMenu(player).open();
         } else if (slot == 14) {
-            player.playSound(player.getLocation(), Sound.ANVIL_USE, 1f, 1f);
+            player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_USE, 1f, 1f);
             new OficinaMenu(player).open();
         } else if (slot == 15) {
-            player.playSound(player.getLocation(), Sound.LEVEL_UP, 1f, 2f);
+            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 2f);
             new RankingMenu(player).open();
         }
     }
@@ -88,7 +88,7 @@ public class MinaMainMenu implements TWMenu {
 
     public void open() {
         player.openInventory(inventory);
-        player.playSound(player.getLocation(), Sound.CHEST_OPEN, 0.5f, 1f);
+        player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.5f, 1f);
     }
 
     private ItemStack createItem(Material mat, String name, String lore) {
@@ -101,9 +101,9 @@ public class MinaMainMenu implements TWMenu {
     }
 
     private ItemStack getPlayerStatsItem(Player player) {
-        ItemStack skull = new ItemStack(Material.SKULL_ITEM, 1, (short) 3);
+        ItemStack skull = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) skull.getItemMeta();
-        meta.setOwner(player.getName());
+        meta.setOwningPlayer(player);
         meta.setDisplayName(ChatColor.YELLOW + "§lEstatísticas Pessoais");
 
         TWUser user = TWCorePlugin.getInstance().getUserManager().getUser(player.getUniqueId());
