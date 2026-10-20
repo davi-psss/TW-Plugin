@@ -2,8 +2,11 @@ package br.com.tw.core;
 
 import br.com.tw.core.data.UserManager;
 import br.com.tw.core.data.UserRepository;
+import br.com.tw.core.data.TWUser;
 import br.com.tw.core.database.DatabaseManager;
 import br.com.tw.core.managers.TWScoreboardManager;
+import br.com.tw.core.utils.TWLuckPermsGroups;
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.List;
@@ -69,6 +72,33 @@ public class TWCorePlugin extends JavaPlugin {
 
     public UserManager getUserManager() {
         return userManager;
+    }
+
+    public void syncLuckPermsGroups(String playerName, TWUser user) {
+        String rankGroup = TWLuckPermsGroups.rank(user.getRankId());
+        for (String rankId : getRankHierarchy()) {
+            String configuredGroup = TWLuckPermsGroups.rank(rankId);
+            if (!configuredGroup.equalsIgnoreCase(rankGroup)) {
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + playerName
+                        + " parent remove " + configuredGroup);
+            }
+        }
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + playerName + " parent add " + rankGroup);
+
+        String prestigeId = user.getPrestigeId();
+        String prestigeGroup = prestigeId == null || prestigeId.equalsIgnoreCase("NENHUM")
+                ? null : TWLuckPermsGroups.prestige(prestigeId);
+        for (String configuredPrestige : getPrestigeHierarchy()) {
+            String configuredGroup = TWLuckPermsGroups.prestige(configuredPrestige);
+            if (!configuredGroup.equalsIgnoreCase(prestigeGroup)) {
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + playerName
+                        + " parent remove " + configuredGroup);
+            }
+        }
+        if (prestigeGroup != null) {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + playerName + " parent add "
+                    + prestigeGroup);
+        }
     }
 
     public String getMineWorldName() {

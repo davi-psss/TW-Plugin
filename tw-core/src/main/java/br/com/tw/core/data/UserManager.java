@@ -1,7 +1,6 @@
 package br.com.tw.core.data;
 
 import br.com.tw.core.TWCorePlugin;
-import br.com.tw.core.utils.TWLuckPermsGroups;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -74,8 +73,7 @@ public class UserManager implements Listener {
                     Player onlinePlayer = Bukkit.getPlayer(uuid);
                     if (onlinePlayer == null || !onlinePlayer.isOnline()) return;
                     usersCache.put(uuid, user);
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
-                            "lp user " + name + " parent set " + TWLuckPermsGroups.rank(user.getRankId()));
+                    plugin.syncLuckPermsGroups(name, user);
                     if (!loaded.isPresent()) {
                         saveUserAsync(user);
                     }

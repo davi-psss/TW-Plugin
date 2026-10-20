@@ -28,8 +28,6 @@ prices:
   PRISMARINE: 25000000.0
   PRISMARINE_BRICKS: 25000000.0
   DARK_PRISMARINE: 25000000.0
-  BEACON: 100000000.0
-
 booster:
   initial-multiplier: 1.0
   maximum-multiplier: 100.0

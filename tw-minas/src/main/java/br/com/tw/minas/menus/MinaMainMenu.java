@@ -64,8 +64,8 @@ public class MinaMainMenu implements TWMenu {
             player.sendMessage(ChatColor.AQUA + "A teleportar para a tua melhor mina...");
 
             TWUser user = TWCorePlugin.getInstance().getUserManager().getUser(player.getUniqueId());
-            String warpName = (user != null && !user.getRankId().equalsIgnoreCase("MAX"))
-                    ? user.getRankId().toLowerCase() : "carvao";
+            String rankId = user == null ? "CARVAO" : user.getRankId();
+            String warpName = rankId.equalsIgnoreCase("MAX") ? "noel" : rankId.toLowerCase(java.util.Locale.ROOT);
 
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "warp " + warpName + " " + player.getName());
         } else if (slot == 11) {

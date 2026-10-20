@@ -22,13 +22,6 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- Conexão com o Vault (Economia) -->
-        <dependency>
-            <groupId>com.github.MilkBowl</groupId>
-            <artifactId>VaultAPI</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
         <!-- Acesso aos Dados do Jogador -->
         <dependency>
             <groupId>br.com.tw</groupId>

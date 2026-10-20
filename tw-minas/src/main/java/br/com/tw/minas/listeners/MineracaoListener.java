@@ -10,6 +10,7 @@ import br.com.tw.minas.managers.ComboManager;
 import br.com.tw.minas.managers.MineEventManager;
 import br.com.tw.minas.menus.OficinaMenu;
 import br.com.tw.minas.utils.ActionBarUtil;
+import br.com.tw.minas.integrations.RealMinesBridge;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.entity.EntityType;
@@ -77,11 +78,11 @@ public class MineracaoListener implements Listener {
         if (player.getGameMode() == GameMode.CREATIVE) return;
 
         Block mainBlock = event.getBlock();
-        event.setCancelled(true);
 
         // Valida se o jogador está realmente com a Picareta na mão
         ItemStack hand = player.getInventory().getItemInMainHand();
         if (hand == null || !hand.getType().name().endsWith("PICKAXE")) {
+            event.setCancelled(true);
             player.sendMessage(ChatColor.RED + "Precisas de usar a tua Picareta de Natal para minerar!");
             return;
         }
@@ -90,20 +91,37 @@ public class MineracaoListener implements Listener {
 
         // Verifica se é um Presente Oculto ou Meteorito Estelar
         if (mainBlock.getType() == Material.ENDER_CHEST && eventManager.handleGiftInteract(player, mainBlock)) {
+            event.setCancelled(true);
             return;
         }
         if (mainBlock.getType() == Material.SEA_LANTERN && eventManager.handleMeteoriteHit(player, mainBlock)) {
+            event.setCancelled(true);
             return;
         }
+
+        TWEconomiaPlugin eco = TWEconomiaPlugin.getInstance();
+        if (eco.getBlockPrice(mainBlock.getType()) <= 0) {
+            event.setCancelled(true);
+            return;
+        }
+
+        RealMinesBridge realMines = TWMinasPlugin.getInstance().getRealMinesBridge();
+        boolean trackedByRealMines;
+        try {
+            trackedByRealMines = realMines != null && realMines.trackBlockBreak(player, event, mainBlock);
+        } catch (IllegalStateException e) {
+            event.setCancelled(true);
+            TWMinasPlugin.getInstance().getLogger().log(
+                    java.util.logging.Level.SEVERE, "Não foi possível atualizar o reset da mina RealMines.", e);
+            player.sendMessage(ChatColor.RED + "A mina está temporariamente indisponível. Contacta a equipa.");
+            return;
+        }
+        if (event.isCancelled()) return;
+        event.setCancelled(true);
 
         UUID uuid = player.getUniqueId();
         TWUser user = TWCorePlugin.getInstance().getUserManager().getUser(uuid);
         if (user == null) return;
-
-        TWEconomiaPlugin eco = TWEconomiaPlugin.getInstance();
-        if (eco.getBlockPrice(mainBlock.getType()) <= 0) {
-            return;
-        }
 
         List<Block> blocksToBreak = new ArrayList<>();
         blocksToBreak.add(mainBlock);
@@ -162,6 +180,16 @@ public class MineracaoListener implements Listener {
                 new br.com.tw.core.events.TWMiningPrepareEvent(event.getPlayer(), mainBlock, blocksToBreak));
         for (Block b : blocksToBreak) {
             if (b.getType() == Material.AIR || eventManager.isSpecialBlock(b.getLocation())) continue;
+            if (trackedByRealMines && realMines != null
+                    && !b.getLocation().equals(mainBlock.getLocation())) {
+                try {
+                    realMines.trackBlockBreak(player, b);
+                } catch (IllegalStateException e) {
+                    TWMinasPlugin.getInstance().getLogger().log(
+                            java.util.logging.Level.SEVERE, "Falha ao atualizar um bloco adicional no reset RealMines.", e);
+                    continue;
+                }
+            }
             double basePrice = eco.getBlockPrice(b.getType());
 
             if (basePrice > 0) {

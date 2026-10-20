@@ -12,7 +12,6 @@ import br.com.tw.caixas.menus.ManualOpeningMenu;
 import br.com.tw.caixas.model.CrateType;
 import br.com.tw.caixas.model.CrateEffect;
 import br.com.tw.core.TWCorePlugin;
-import br.com.tw.core.utils.TWLuckPermsGroups;
 import br.com.tw.core.data.TWUser;
 import br.com.tw.core.events.TWFarmHarvestEvent;
 import br.com.tw.core.events.TWBlockMinedEvent;
@@ -425,10 +424,7 @@ public final class CrateListener implements Listener {
         user.setPrestigeId(nextPrestige);
         user.setRankId("CARVAO");
         TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
-                "lp user " + player.getName() + " parent add " + TWLuckPermsGroups.prestige(nextPrestige));
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + player.getName() + " parent set "
-                + TWLuckPermsGroups.rank("CARVAO"));
+        TWCorePlugin.getInstance().syncLuckPermsGroups(player.getName(), user);
         consumeHeldItem(player);
         player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_ENDER_DRAGON_GROWL, 1.0f, 0.8f);
         player.sendMessage("§dO orbe avançou-te gratuitamente para o prestígio §5" + nextPrestige + "§d.");

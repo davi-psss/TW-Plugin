@@ -2,7 +2,6 @@ package br.com.tw.ranks.commands;
 
 import br.com.tw.core.TWCorePlugin;
 import br.com.tw.core.data.TWUser;
-import br.com.tw.core.utils.TWLuckPermsGroups;
 import br.com.tw.ranks.TWRanksPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -40,7 +39,12 @@ public class RankupMaxCommand implements CommandExecutor {
 
         while (true) {
             String nextRank = plugin.getRanksConfig().getString("ranks." + novoRank + ".next");
-            if (nextRank == null || nextRank.equalsIgnoreCase("MAX")) break;
+            if (nextRank == null) break;
+            if (nextRank.equalsIgnoreCase("MAX")) {
+                novoRank = "MAX";
+                ranksEvoluidos++;
+                break;
+            }
 
             double cost = plugin.getRanksConfig().getDouble("ranks." + novoRank + ".cost");
             if (user.removeBalance(cost)) {
@@ -60,8 +64,7 @@ public class RankupMaxCommand implements CommandExecutor {
         if (ranksEvoluidos > 0) {
             user.setRankId(novoRank);
             TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + player.getName() + " parent set "
-                    + TWLuckPermsGroups.rank(novoRank));
+            TWCorePlugin.getInstance().syncLuckPermsGroups(player.getName(), user);
 
             player.sendMessage(ChatColor.GREEN + "Evoluíste " + ranksEvoluidos + " ranks! Agora estás no Rank " + ChatColor.YELLOW + ChatColor.BOLD + novoRank);
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 0.8f);

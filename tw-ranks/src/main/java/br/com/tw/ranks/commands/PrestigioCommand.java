@@ -2,7 +2,6 @@ package br.com.tw.ranks.commands;
 
 import br.com.tw.core.TWCorePlugin;
 import br.com.tw.core.data.TWUser;
-import br.com.tw.core.utils.TWLuckPermsGroups;
 import br.com.tw.ranks.TWRanksPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -70,11 +69,7 @@ public class PrestigioCommand implements CommandExecutor {
                 // Salva os dados imediatamente (ver Passo 2 abaixo)
                 TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);
 
-                // Atualiza o LuckPerms
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + player.getName() + " parent add "
-                        + TWLuckPermsGroups.prestige(nextPrestige));
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + player.getName() + " parent set "
-                        + TWLuckPermsGroups.rank("CARVAO"));
+                TWCorePlugin.getInstance().syncLuckPermsGroups(player.getName(), user);
 
                 player.sendMessage(ChatColor.GREEN + "Evoluíste para o Prestígio " + ChatColor.GOLD + ChatColor.BOLD + nextPrestige + ChatColor.GREEN + "!");
                 player.sendMessage(ChatColor.YELLOW + "O teu Rank foi resetado para CARVÃO.");

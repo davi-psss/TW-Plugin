@@ -3,7 +3,6 @@ package br.com.tw.ranks.commands;
 import br.com.tw.core.TWCorePlugin;
 import br.com.tw.core.data.TWUser;
 import br.com.tw.core.utils.TWFormat;
-import br.com.tw.core.utils.TWLuckPermsGroups;
 import br.com.tw.ranks.TWRanksPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -63,8 +62,7 @@ public class RankupCommand implements CommandExecutor {
                 user.setRankId(nextRank);
 
                 // Sincronização com o LuckPerms
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + player.getName() + " parent set "
-                        + TWLuckPermsGroups.rank(nextRank));
+                TWCorePlugin.getInstance().syncLuckPermsGroups(player.getName(), user);
 
                 // Salva no banco de dados de forma assíncrona
                 TWCorePlugin.getInstance().getUserManager().saveUserAsync(user);

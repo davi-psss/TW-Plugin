@@ -3,7 +3,7 @@ setlocal
 title TW Plugin - Build e Deploy
 
 set "PROJECT_DIR=%~dp0"
-set "SERVER_DIR=C:\Users\SUPORTE\Desktop\TW_Network_Lastest"
+set "SERVER_DIR=%PROJECT_DIR%..\TW_Network_Lastest"
 set "SERVER_PLUGINS=%SERVER_DIR%\plugins"
 set "MODULES=tw-core tw-economia tw-maquinas tw-minas tw-ranks tw-spawners tw-terrenos tw-farms tw-caixas"
 

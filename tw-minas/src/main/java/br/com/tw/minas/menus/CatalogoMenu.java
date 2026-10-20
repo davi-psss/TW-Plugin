@@ -32,7 +32,7 @@ public class CatalogoMenu implements TWMenu {
 
     private void initWarps() {
         // Linha 2 e 3: Jornada Principal
-        warpsMap.put(10, new WarpInfo("carvao", "group.carvao", Material.COAL_BLOCK, "§8[§0Carvão§8]"));
+        warpsMap.put(10, new WarpInfo("carvao", "group.default", Material.COAL_BLOCK, "§8[§0Carvão§8]"));
         warpsMap.put(11, new WarpInfo("neve", "group.neve", Material.SNOW_BLOCK, "§8[§fNeve§8]"));
         warpsMap.put(12, new WarpInfo("sino", "group.sino", Material.GOLD_BLOCK, "§8[§eSino§8]"));
         warpsMap.put(13, new WarpInfo("biscoito", "group.biscoito", Material.BROWN_TERRACOTTA, "§8[§6Biscoito§8]"));
@@ -44,9 +44,9 @@ public class CatalogoMenu implements TWMenu {
         warpsMap.put(23, new WarpInfo("noel", "group.noel", Material.EMERALD_BLOCK, "§8[§c§lNoel§8]"));
 
         // Linha 4: VIPs
-        warpsMap.put(30, new WarpInfo("vipfestivo", "group.vipfestivo", Material.LIME_WOOL, "§a[VIP Festivo]"));
-        warpsMap.put(31, new WarpInfo("vipnevasca", "group.vipnevasca", Material.LIGHT_BLUE_WOOL, "§b[VIP Nevasca]"));
-        warpsMap.put(32, new WarpInfo("vippolar", "group.vippolar", Material.RED_WOOL, "§c[VIP Polar]"));
+        warpsMap.put(30, new WarpInfo("vipfestivo", "group.vip_festivo", Material.LIME_WOOL, "§a[VIP Festivo]"));
+        warpsMap.put(31, new WarpInfo("vipnevasca", "group.vip_nevasca", Material.LIGHT_BLUE_WOOL, "§b[VIP Nevasca]"));
+        warpsMap.put(32, new WarpInfo("vippolar", "group.vip_polar", Material.RED_WOOL, "§c[VIP Polar]"));
 
         // Linha 5: Prestígios
         warpsMap.put(38, new WarpInfo("grinch", "group.grinch", Material.EMERALD_BLOCK, "§2Prestígio I [Grinch]"));
