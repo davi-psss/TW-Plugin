@@ -32,29 +32,29 @@ public class CatalogoMenu implements TWMenu {
 
     private void initWarps() {
         // Linha 2 e 3: Jornada Principal
-        warpsMap.put(10, new WarpInfo("carvao", "group.default", Material.COAL_BLOCK, "§8[§0Carvão§8]"));
-        warpsMap.put(11, new WarpInfo("neve", "group.neve", Material.SNOW_BLOCK, "§8[§fNeve§8]"));
-        warpsMap.put(12, new WarpInfo("sino", "group.sino", Material.GOLD_BLOCK, "§8[§eSino§8]"));
-        warpsMap.put(13, new WarpInfo("biscoito", "group.biscoito", Material.BROWN_TERRACOTTA, "§8[§6Biscoito§8]"));
-        warpsMap.put(14, new WarpInfo("duende", "group.duende", Material.GREEN_WOOL, "§8[§aDuende§8]"));
-        warpsMap.put(19, new WarpInfo("rena", "group.rena", Material.SPRUCE_LOG, "§8[§cRena§8]"));
-        warpsMap.put(20, new WarpInfo("treno", "group.treno", Material.QUARTZ_BLOCK, "§8[§4Trenó§8]"));
-        warpsMap.put(21, new WarpInfo("quebranozes", "group.quebranozes", Material.RED_TERRACOTTA, "§8[§5Quebra-Nozes§8]"));
-        warpsMap.put(22, new WarpInfo("estrela", "group.estrela", Material.GLOWSTONE, "§8[§e§lEstrela§8]"));
-        warpsMap.put(23, new WarpInfo("noel", "group.noel", Material.EMERALD_BLOCK, "§8[§c§lNoel§8]"));
+        warpsMap.put(10, new WarpInfo("carvao", "realmines.carvao.break", Material.COAL_BLOCK, "§8[§0Carvão§8]"));
+        warpsMap.put(11, new WarpInfo("neve", "realmines.neve.break", Material.SNOW_BLOCK, "§8[§fNeve§8]"));
+        warpsMap.put(12, new WarpInfo("sino", "realmines.sino.break", Material.GOLD_BLOCK, "§8[§eSino§8]"));
+        warpsMap.put(13, new WarpInfo("biscoito", "realmines.biscoito.break", Material.BROWN_TERRACOTTA, "§8[§6Biscoito§8]"));
+        warpsMap.put(14, new WarpInfo("duende", "realmines.duende.break", Material.GREEN_WOOL, "§8[§aDuende§8]"));
+        warpsMap.put(19, new WarpInfo("rena", "realmines.rena.break", Material.SPRUCE_LOG, "§8[§cRena§8]"));
+        warpsMap.put(20, new WarpInfo("treno", "realmines.treno.break", Material.QUARTZ_BLOCK, "§8[§4Trenó§8]"));
+        warpsMap.put(21, new WarpInfo("quebranozes", "realmines.quebranozes.break", Material.RED_TERRACOTTA, "§8[§5Quebra-Nozes§8]"));
+        warpsMap.put(22, new WarpInfo("estrela", "realmines.estrela.break", Material.GLOWSTONE, "§8[§e§lEstrela§8]"));
+        warpsMap.put(23, new WarpInfo("noel", "realmines.noel.break", Material.EMERALD_BLOCK, "§8[§c§lNoel§8]"));
 
         // Linha 4: VIPs
-        warpsMap.put(30, new WarpInfo("vipfestivo", "group.vip_festivo", Material.LIME_WOOL, "§a[VIP Festivo]"));
-        warpsMap.put(31, new WarpInfo("vipnevasca", "group.vip_nevasca", Material.LIGHT_BLUE_WOOL, "§b[VIP Nevasca]"));
-        warpsMap.put(32, new WarpInfo("vippolar", "group.vip_polar", Material.RED_WOOL, "§c[VIP Polar]"));
+        warpsMap.put(30, new WarpInfo("vip_festivo", "realmines.vip_festivo.break", Material.LIME_WOOL, "§a[VIP Festivo]"));
+        warpsMap.put(31, new WarpInfo("vip_nevasca", "realmines.vip_nevasca.break", Material.LIGHT_BLUE_WOOL, "§b[VIP Nevasca]"));
+        warpsMap.put(32, new WarpInfo("vip_polar", "realmines.vip_polar.break", Material.RED_WOOL, "§c[VIP Polar]"));
 
         // Linha 5: Prestígios
-        warpsMap.put(38, new WarpInfo("grinch", "group.grinch", Material.EMERALD_BLOCK, "§2Prestígio I [Grinch]"));
-        warpsMap.put(39, new WarpInfo("yeti", "group.yeti", Material.DARK_PRISMARINE, "§bPrestígio II [Yeti]"));
-        warpsMap.put(40, new WarpInfo("krampus", "group.krampus", Material.BEACON, "§4Prestígio III [Krampus]"));
+        warpsMap.put(38, new WarpInfo("grinch", "realmines.grinch.break", Material.EMERALD_BLOCK, "§2Prestígio I [Grinch]"));
+        warpsMap.put(39, new WarpInfo("yeti", "realmines.yeti.break", Material.DARK_PRISMARINE, "§bPrestígio II [Yeti]"));
+        warpsMap.put(40, new WarpInfo("krampus", "realmines.krampus.break", Material.BEACON, "§4Prestígio III [Krampus]"));
 
         // PvP (Sempre desbloqueada)
-        warpsMap.put(42, new WarpInfo("minapvp", "", Material.DIAMOND_SWORD, "§c⚒ Mina PvP [Congelada]"));
+        warpsMap.put(42, new WarpInfo(null, "", Material.DIAMOND_SWORD, "§c⚒ Mina PvP [Congelada]"));
     }
 
     private void setupItems() {
@@ -69,7 +69,7 @@ public class CatalogoMenu implements TWMenu {
             WarpInfo info = entry.getValue();
 
             // A Mina PvP não tem permissão exigida
-            if (info.perm.isEmpty() || player.hasPermission(info.perm) || player.hasPermission("tw.admin")) {
+            if (info.perm.isEmpty() || player.hasPermission(info.perm)) {
                 inventory.setItem(slot, createItem(info.mat, info.name, "", "§aClica para viajar!"));
             } else {
                 inventory.setItem(slot, createItem(Material.GRAY_DYE, info.name, "", "§cMina Bloqueada!", "§7Evolui para aceder."));
@@ -99,10 +99,29 @@ public class CatalogoMenu implements TWMenu {
 
         WarpInfo info = warpsMap.get(slot);
         if (info != null) {
+            if (info.mineName != null) {
+                if (!Bukkit.getPluginManager().isPluginEnabled("RealMines")) {
+                    player.sendMessage(ChatColor.RED + "O sistema de minas está indisponível. Avise a equipe.");
+                    return;
+                }
+                if (!player.hasPermission("realmines.tp")) {
+                    player.sendMessage(ChatColor.RED + "Você não tem permissão para se teleportar às minas.");
+                    return;
+                }
+            }
+
             player.closeInventory();
             player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
             player.sendMessage(ChatColor.GREEN + "⚒ A viajar para a mina " + info.name + "...");
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "warp " + info.warpName + " " + player.getName());
+            boolean dispatched;
+            if (info.mineName == null) {
+                dispatched = Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "warp minapvp " + player.getName());
+            } else {
+                dispatched = Bukkit.dispatchCommand(player, "mine tp " + info.mineName);
+            }
+            if (!dispatched) {
+                player.sendMessage(ChatColor.RED + "Não foi possível executar o teleporte para essa mina. Avise a equipe.");
+            }
         }
     }
 
@@ -126,13 +145,13 @@ public class CatalogoMenu implements TWMenu {
 
     // Estrutura de dados para guardar a configuração de cada botão
     private static class WarpInfo {
-        String warpName;
+        String mineName;
         String perm;
         Material mat;
         String name;
 
-        WarpInfo(String warpName, String perm, Material mat, String name) {
-            this.warpName = warpName;
+        WarpInfo(String mineName, String perm, Material mat, String name) {
+            this.mineName = mineName;
             this.perm = perm;
             this.mat = mat;
             this.name = name;

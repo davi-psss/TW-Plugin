@@ -19,8 +19,28 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
 import java.util.Arrays;
+import java.util.List;
 
 public class MinaMainMenu implements TWMenu {
+
+    private static final List<String> MINE_PRIORITY = Arrays.asList(
+            "krampus",
+            "yeti",
+            "grinch",
+            "vip_festivo",
+            "vip_nevasca",
+            "vip_polar",
+            "noel",
+            "estrela",
+            "quebranozes",
+            "treno",
+            "rena",
+            "duende",
+            "biscoito",
+            "sino",
+            "neve",
+            "carvao"
+    );
 
     private final Inventory inventory;
     private final Player player;
@@ -60,14 +80,7 @@ public class MinaMainMenu implements TWMenu {
 
         if (slot == 13) {
             player.closeInventory();
-            player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
-            player.sendMessage(ChatColor.AQUA + "A teleportar para a tua melhor mina...");
-
-            TWUser user = TWCorePlugin.getInstance().getUserManager().getUser(player.getUniqueId());
-            String rankId = user == null ? "CARVAO" : user.getRankId();
-            String warpName = rankId.equalsIgnoreCase("MAX") ? "noel" : rankId.toLowerCase(java.util.Locale.ROOT);
-
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "warp " + warpName + " " + player.getName());
+            teleportToBestMine();
         } else if (slot == 11) {
             player.playSound(player.getLocation(), Sound.ENTITY_BAT_TAKEOFF, 0.5f, 1.5f);
             new CartinhasMenu(player).open();
@@ -103,7 +116,7 @@ public class MinaMainMenu implements TWMenu {
     private ItemStack getPlayerStatsItem(Player player) {
         ItemStack skull = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) skull.getItemMeta();
-        meta.setOwningPlayer(player);
+        meta.setOwnerProfile(player.getPlayerProfile());
         meta.setDisplayName(ChatColor.YELLOW + "§lEstatísticas Pessoais");
 
         TWUser user = TWCorePlugin.getInstance().getUserManager().getUser(player.getUniqueId());
@@ -118,5 +131,30 @@ public class MinaMainMenu implements TWMenu {
 
         skull.setItemMeta(meta);
         return skull;
+    }
+
+    private void teleportToBestMine() {
+        if (!Bukkit.getPluginManager().isPluginEnabled("RealMines")) {
+            player.sendMessage(ChatColor.RED + "O sistema de minas está indisponível. Avise a equipe.");
+            return;
+        }
+        if (!player.hasPermission("realmines.tp")) {
+            player.sendMessage(ChatColor.RED + "Você não tem permissão para se teleportar às minas.");
+            return;
+        }
+
+        for (String mine : MINE_PRIORITY) {
+            if (!player.hasPermission("realmines." + mine + ".break")) continue;
+
+            player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
+            player.sendMessage(ChatColor.AQUA + "A teleportar para a tua melhor mina...");
+            if (!Bukkit.dispatchCommand(player, "mine tp " + mine)) {
+                player.sendMessage(ChatColor.RED + "Não foi possível executar o teleporte para a mina "
+                        + mine + ". Avise a equipe.");
+            }
+            return;
+        }
+
+        player.sendMessage(ChatColor.RED + "Você não tem acesso a nenhuma mina. Avise a equipe.");
     }
 }
